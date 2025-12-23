@@ -1,0 +1,56 @@
+/* KPI Badge Styles */
+
+.badge {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.label {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.amount {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Type-specific colors */
+.income {
+  color: #34c759; /* Green */
+}
+
+.expense {
+  color: #ff3b30; /* Red */
+}
+
+.profit {
+  color: #0071e3; /* Blue */
+}
+
+.loss {
+  color: #ff3b30; /* Red */
+}
+
+.neutral {
+  color: rgba(255, 255, 255, 0.8); /* White */
+}
+
+@media (max-width: 768px) {
+  .badge {
+    padding: 0.875rem 1rem;
+  }
+
+  .amount {
+    font-size: 1.25rem;
+  }
+}

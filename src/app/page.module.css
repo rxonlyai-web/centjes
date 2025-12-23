@@ -1,141 +1,89 @@
 .page {
   --background: #fafafa;
-  --foreground: #fff;
-
-  --text-primary: #000;
-  --text-secondary: #666;
-
-  --button-primary-hover: #383838;
-  --button-secondary-hover: #f2f2f2;
-  --button-secondary-border: #ebebeb;
+  --foreground: #000; /* Assuming this was intended for light mode */
+  --gray-100: #f2f2f2;
+  --gray-200: #e5e5e5;
+  --gray-500: #888; /* Placeholder, adjust as needed */
+  --accent: #007aff; /* Apple blue */
+  --accent-hover: #005bb5; /* Darker blue for hover */
 
   display: flex;
   min-height: 100vh;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-geist-sans);
+  padding: 2rem;
   background-color: var(--background);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 }
 
 .main {
   display: flex;
-  min-height: 100vh;
-  width: 100%;
-  max-width: 800px;
   flex-direction: column;
-  align-items: flex-start;
-  justify-content: space-between;
-  background-color: var(--foreground);
-  padding: 120px 60px;
+  align-items: center;
+  gap: 2rem;
+  text-align: center;
+  max-width: 600px;
 }
 
-.intro {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  text-align: left;
-  gap: 24px;
+.title {
+  font-size: 48px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  background: linear-gradient(180deg, var(--foreground) 0%, var(--gray-500) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-.intro h1 {
-  max-width: 320px;
-  font-size: 40px;
-  font-weight: 600;
-  line-height: 48px;
-  letter-spacing: -2.4px;
-  text-wrap: balance;
-  color: var(--text-primary);
-}
-
-.intro p {
-  max-width: 440px;
-  font-size: 18px;
-  line-height: 32px;
-  text-wrap: balance;
-  color: var(--text-secondary);
-}
-
-.intro a {
-  font-weight: 500;
-  color: var(--text-primary);
+.subtitle {
+  font-size: 20px;
+  color: var(--gray-500);
+  line-height: 1.5;
+  font-weight: 400;
 }
 
 .ctas {
   display: flex;
-  flex-direction: row;
-  width: 100%;
-  max-width: 440px;
-  gap: 16px;
-  font-size: 14px;
+  gap: 1rem;
+  margin-top: 1rem;
 }
 
-.ctas a {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 40px;
-  padding: 0 16px;
-  border-radius: 128px;
-  border: 1px solid transparent;
-  transition: 0.2s;
-  cursor: pointer;
-  width: fit-content;
+.primary {
+  background-color: var(--accent);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 24px;
   font-weight: 500;
+  font-size: 16px;
+  transition: all 0.2s;
+  text-decoration: none; /* Ensure links don't have underlines */
 }
 
-a.primary {
-  background: var(--text-primary);
-  color: var(--background);
-  gap: 8px;
+.primary:hover {
+  background-color: var(--accent-hover);
+  transform: scale(1.02);
 }
 
-a.secondary {
-  border-color: var(--button-secondary-border);
+.secondary {
+  background-color: var(--gray-100);
+  color: var(--foreground);
+  padding: 12px 24px;
+  border-radius: 24px;
+  font-weight: 500;
+  font-size: 16px;
+  transition: all 0.2s;
+  text-decoration: none; /* Ensure links don't have underlines */
 }
 
-/* Enable hover only on non-touch devices */
-@media (hover: hover) and (pointer: fine) {
-  a.primary:hover {
-    background: var(--button-primary-hover);
-    border-color: transparent;
-  }
-
-  a.secondary:hover {
-    background: var(--button-secondary-hover);
-    border-color: transparent;
-  }
-}
-
-@media (max-width: 600px) {
-  .main {
-    padding: 48px 24px;
-  }
-
-  .intro {
-    gap: 16px;
-  }
-
-  .intro h1 {
-    font-size: 32px;
-    line-height: 40px;
-    letter-spacing: -1.92px;
-  }
+.secondary:hover {
+  background-color: var(--gray-200);
 }
 
 @media (prefers-color-scheme: dark) {
-  .logo {
-    filter: invert();
-  }
-
   .page {
     --background: #000;
-    --foreground: #000;
-
-    --text-primary: #ededed;
-    --text-secondary: #999;
-
-    --button-primary-hover: #ccc;
-    --button-secondary-hover: #1a1a1a;
     --button-secondary-border: #1a1a1a;
   }
 }
