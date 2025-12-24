@@ -1,39 +1,50 @@
--- Create 'documents' bucket if it doesn't exist
+-- 003_storage_policies.sql
+-- Safe storage setup without ALTER TABLE storage.objects (not allowed for non-owner roles)
+
 insert into storage.buckets (id, name, public)
 values ('documents', 'documents', false)
 on conflict (id) do nothing;
 
--- Enable RLS on storage.objects (usually enabled by default, but good to ensure)
-alter table storage.objects enable row level security;
+drop policy if exists "documents_read_own" on storage.objects;
+create policy "documents_read_own"
+on storage.objects
+for select
+to authenticated
+using (
+  bucket_id = 'documents'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
 
--- Policy: Users can upload their own documents
-create policy "Users can upload their own documents"
-on storage.objects for insert
+drop policy if exists "documents_insert_own" on storage.objects;
+create policy "documents_insert_own"
+on storage.objects
+for insert
+to authenticated
 with check (
-  bucket_id = 'documents' and
-  auth.uid() = (storage.foldername(name))[1]::uuid
+  bucket_id = 'documents'
+  and (storage.foldername(name))[1] = auth.uid()::text
 );
 
--- Policy: Users can view their own documents
-create policy "Users can view their own documents"
-on storage.objects for select
+drop policy if exists "documents_update_own" on storage.objects;
+create policy "documents_update_own"
+on storage.objects
+for update
+to authenticated
 using (
-  bucket_id = 'documents' and
-  auth.uid() = (storage.foldername(name))[1]::uuid
+  bucket_id = 'documents'
+  and (storage.foldername(name))[1] = auth.uid()::text
+)
+with check (
+  bucket_id = 'documents'
+  and (storage.foldername(name))[1] = auth.uid()::text
 );
 
--- Policy: Users can update their own documents
-create policy "Users can update their own documents"
-on storage.objects for update
+drop policy if exists "documents_delete_own" on storage.objects;
+create policy "documents_delete_own"
+on storage.objects
+for delete
+to authenticated
 using (
-  bucket_id = 'documents' and
-  auth.uid() = (storage.foldername(name))[1]::uuid
-);
-
--- Policy: Users can delete their own documents
-create policy "Users can delete their own documents"
-on storage.objects for delete
-using (
-  bucket_id = 'documents' and
-  auth.uid() = (storage.foldername(name))[1]::uuid
+  bucket_id = 'documents'
+  and (storage.foldername(name))[1] = auth.uid()::text
 );
