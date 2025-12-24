@@ -1,0 +1,384 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 0.5rem 0;
+}
+
+.loading,
+.error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  color: var(--gray-500);
+  text-align: center;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+  color: var(--accent);
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.errorBanner {
+  padding: 12px 16px;
+  background-color: rgba(255, 59, 48, 0.1);
+  border: 1px solid rgba(255, 59, 48, 0.3);
+  border-radius: 8px;
+  color: #ff3b30;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+/* View Mode */
+.viewMode {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.label {
+  font-size: 0.875rem;
+  color: var(--gray-500);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.value {
+  font-size: 1rem;
+  color: var(--foreground);
+  font-weight: 400;
+}
+
+.typeBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  width: fit-content;
+}
+
+.typeBadge.income {
+  background-color: rgba(52, 199, 89, 0.1);
+  color: #34c759;
+}
+
+.typeBadge.expense {
+  background-color: rgba(255, 59, 48, 0.1);
+  color: #ff3b30;
+}
+
+.badge {
+  display: inline-flex;
+  padding: 0.25rem 0.625rem;
+  background-color: var(--gray-100);
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+/* Documents */
+.documentList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.documentItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background-color: var(--gray-50);
+  border-radius: 8px;
+  border: 1px solid var(--gray-300);
+}
+
+.documentItem svg {
+  flex-shrink: 0;
+  color: var(--gray-500);
+}
+
+.documentName {
+  flex: 1;
+  font-size: 0.875rem;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viewDocButton {
+  padding: 0.375rem 0.75rem;
+  background-color: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.viewDocButton:hover {
+  background-color: var(--accent-hover);
+}
+
+/* Edit Mode */
+.editMode {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.toggleContainer {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.25rem;
+  background-color: var(--gray-50);
+  border-radius: 8px;
+}
+
+.toggleButton {
+  flex: 1;
+  padding: 0.625rem 1rem;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--gray-500);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.toggleButton:hover {
+  background-color: var(--gray-100);
+  color: var(--foreground);
+}
+
+.toggleButton.active {
+  color: white;
+}
+
+.toggleButton.active.income {
+  background-color: #34c759;
+}
+
+.toggleButton.active.expense {
+  background-color: #ff3b30;
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.formLabel {
+  font-size: 0.875rem;
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+.input,
+.select {
+  padding: 0.75rem 1rem;
+  background-color: var(--gray-50);
+  border: 1px solid var(--gray-300);
+  border-radius: 8px;
+  color: var(--foreground);
+  font-size: 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input:focus,
+.select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(41, 151, 255, 0.1);
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--gray-300);
+}
+
+.editButton,
+.saveButton {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.editButton:hover,
+.saveButton:hover {
+  background-color: var(--accent-hover);
+}
+
+.editButton:active,
+.saveButton:active {
+  transform: scale(0.98);
+}
+
+.saveButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.deleteButton {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background-color: rgba(255, 59, 48, 0.1);
+  color: #ff3b30;
+  border: 1px solid rgba(255, 59, 48, 0.3);
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.deleteButton:hover {
+  background-color: rgba(255, 59, 48, 0.15);
+  border-color: rgba(255, 59, 48, 0.4);
+}
+
+.deleteButton:active {
+  transform: scale(0.98);
+}
+
+.cancelButton {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--gray-100);
+  color: var(--foreground);
+  border: 1px solid var(--gray-300);
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancelButton:hover {
+  background-color: var(--gray-200);
+}
+
+.cancelButton:active {
+  transform: scale(0.98);
+}
+
+.cancelButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Delete Confirmation */
+.deleteConfirmation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.deleteIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  background-color: rgba(255, 59, 48, 0.1);
+  border-radius: 50%;
+  color: #ff3b30;
+}
+
+.deleteTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.deleteMessage {
+  font-size: 0.9375rem;
+  color: var(--gray-500);
+  margin: 0;
+}
+
+.deleteActions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 300px;
+}
+
+.confirmDeleteButton {
+  padding: 0.875rem 1.5rem;
+  background-color: #ff3b30;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.confirmDeleteButton:hover {
+  background-color: #e63329;
+}
+
+.confirmDeleteButton:active {
+  transform: scale(0.98);
+}
+
+.confirmDeleteButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

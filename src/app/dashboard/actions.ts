@@ -67,9 +67,12 @@ export async function createTransactionFromReceipt(formData: FormData) {
     .from('documents')
     .insert({
       user_id: user.id,
-      file_path: uploadData.path,
+      file_path: uploadData.path, // Legacy field
+      storage_path: uploadData.path, // New field for clarity
+      storage_bucket: 'documents',
       original_filename: file.name,
       mime_type: file.type,
+      size_bytes: file.size,
       status: 'uploaded',
     })
     .select()
@@ -208,6 +211,25 @@ export async function createTransactionFromReceipt(formData: FormData) {
     if (transactionError) {
       console.error('Transaction insert error:', transactionError)
       throw new Error('Kon transactie niet aanmaken. Probeer het opnieuw.')
+    }
+
+    console.log('[createTransactionFromReceipt] Transaction created:', transactionResult.id)
+    console.log('[createTransactionFromReceipt] Linking document:', documentId, 'to transaction:', transactionResult.id)
+
+    // Link document to transaction via join table
+    const { error: linkError } = await supabase
+      .from('transaction_documents')
+      .insert({
+        transaction_id: transactionResult.id,
+        document_id: documentId,
+      })
+
+    if (linkError) {
+      console.error('[createTransactionFromReceipt] Failed to link document to transaction:', linkError)
+      // Non-fatal: transaction was created successfully
+      // The document exists but isn't linked - user can still see transaction
+    } else {
+      console.log('[createTransactionFromReceipt] Successfully linked document to transaction')
     }
 
     // Revalidate all affected pages
@@ -366,6 +388,68 @@ export async function extractTransactionFromDocument(formData: FormData) {
       throw new Error('Kon factuurgegevens niet verwerken. Probeer het opnieuw of vul handmatig in.')
     }
 
+    // Create document record in database
+    console.log('[extractTransactionFromDocument] Creating document record for:', uploadData.path)
+    
+    // Try with full schema first (includes migration 004 fields)
+    let documentData = null
+    let insertError = null
+    
+    const fullInsert = {
+      user_id: user.id,
+      file_path: uploadData.path,
+      storage_path: uploadData.path,
+      storage_bucket: 'documents',
+      original_filename: file.name,
+      mime_type: file.type,
+      size_bytes: file.size,
+      status: 'extracted' as const,
+      extracted_json: extractedData,
+    }
+    
+    const { data: fullData, error: fullError } = await supabase
+      .from('documents')
+      .insert(fullInsert)
+      .select()
+      .single()
+    
+    if (fullError) {
+      console.log('[extractTransactionFromDocument] Full insert failed:', fullError.message)
+      
+      // Try with base schema only (without migration 004 fields)
+      const baseInsert = {
+        user_id: user.id,
+        file_path: uploadData.path,
+        original_filename: file.name,
+        mime_type: file.type,
+        status: 'extracted' as const,
+        extracted_json: extractedData,
+      }
+      
+      const { data: baseData, error: baseError } = await supabase
+        .from('documents')
+        .insert(baseInsert)
+        .select()
+        .single()
+      
+      if (baseError) {
+        console.error('[extractTransactionFromDocument] Base insert also failed:', baseError)
+        insertError = baseError
+      } else {
+        documentData = baseData
+        console.log('[extractTransactionFromDocument] Document created with base schema:', baseData.id)
+      }
+    } else {
+      documentData = fullData
+      console.log('[extractTransactionFromDocument] Document created with full schema:', fullData.id)
+    }
+    
+    // If both inserts failed, clean up and throw
+    if (!documentData) {
+      await supabase.storage.from('documents').remove([uploadData.path])
+      throw new Error(`Kon document niet opslaan: ${insertError?.message || 'Unknown error'}`)
+    }
+
     // Get public URL for preview
     const { data: { publicUrl } } = supabase.storage
       .from('documents')
@@ -375,6 +459,7 @@ export async function extractTransactionFromDocument(formData: FormData) {
       storage_path: uploadData.path,
       public_url: publicUrl,
       extracted: extractedData,
+      document_id: documentData.id,
     }
 
   } catch (error) {
@@ -475,11 +560,55 @@ export async function createTransaction(formData: FormData) {
     bon_url,
   }
 
-  const { error } = await supabase.from('transacties').insert(rawData)
+
+  const { data: newTransaction, error } = await supabase
+    .from('transacties')
+    .insert(rawData)
+    .select()
+    .single()
 
   if (error) {
     console.error('Supabase error:', error)
     throw new Error('Kon transactie niet opslaan. Probeer het opnieuw.')
+  }
+
+  // Link document if bon_url was set from upload flow
+  // Check if bon_url is a storage path (from extractTransactionFromDocument)
+  const uploadedStoragePath = formData.get('bon_url') as string | null
+  if (uploadedStoragePath && !uploadedStoragePath.startsWith('http')) {
+    console.log('[createTransaction] Attempting to link document with path:', uploadedStoragePath)
+    
+    // Find document by storage_path OR file_path (for backward compatibility)
+    const { data: documents, error: docFindError } = await supabase
+      .from('documents')
+      .select('id')
+      .eq('user_id', user.id)
+      .or(`storage_path.eq.${uploadedStoragePath},file_path.eq.${uploadedStoragePath}`)
+      .limit(1)
+
+    if (docFindError) {
+      console.error('[createTransaction] Error finding document:', docFindError)
+    } else if (!documents || documents.length === 0) {
+      console.warn('[createTransaction] No document found for path:', uploadedStoragePath)
+    } else {
+      const document = documents[0]
+      console.log('[createTransaction] Found document:', document.id)
+      
+      const { error: linkError } = await supabase
+        .from('transaction_documents')
+        .insert({
+          transaction_id: newTransaction.id,
+          document_id: document.id,
+        })
+
+      if (linkError) {
+        console.error('[createTransaction] Failed to link document to transaction:', linkError)
+        // Non-fatal: transaction was created, but link failed
+        // Could be duplicate key error if already linked
+      } else {
+        console.log('[createTransaction] Successfully linked document', document.id, 'to transaction', newTransaction.id)
+      }
+    }
   }
 
   // Revalidate all affected pages
@@ -670,6 +799,38 @@ export async function getTransactions() {
 }
 
 /**
+ * Get a single transaction by ID
+ * 
+ * Returns transaction details for the specified ID.
+ * Only returns transactions owned by the authenticated user (RLS enforced).
+ */
+export async function getTransaction(transactionId: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return null
+  }
+
+  const { data, error } = await supabase
+    .from('transacties')
+    .select('*')
+    .eq('id', transactionId)
+    .eq('gebruiker_id', user.id)
+    .single()
+
+  if (error) {
+    console.error('Error fetching transaction:', error)
+    return null
+  }
+
+  return data
+}
+
+/**
  * Get transactions with financial totals for a specific year and optional month
  * 
  * Returns:
@@ -790,4 +951,116 @@ export async function getTransactionsWithTotals(
       resultaat: Math.round(resultaat * 100) / 100
     }
   }
+}
+
+/**
+ * Get all documents linked to a transaction
+ * 
+ * Returns document metadata for all documents attached to the specified transaction.
+ * Uses the transaction_documents join table.
+ */
+export async function getTransactionDocuments(transactionId: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    console.log('[getTransactionDocuments] No user found')
+    return []
+  }
+
+  console.log('[getTransactionDocuments] Fetching documents for transaction:', transactionId)
+
+  // Select only base schema fields (file_path, original_filename, mime_type)
+  // uploaded_at may not exist in all schemas
+  const { data, error } = await supabase
+    .from('transaction_documents')
+    .select(`
+      document_id,
+      documents (
+        id,
+        file_path,
+        original_filename,
+        mime_type
+      )
+    `)
+    .eq('transaction_id', transactionId)
+
+  if (error) {
+    console.error('[getTransactionDocuments] Error fetching:', error)
+    return []
+  }
+
+  console.log('[getTransactionDocuments] Raw data:', data)
+
+  // Flatten the nested structure and map to expected format
+  const documents = (data || [])
+    .map((item: { documents: unknown }) => {
+      const doc = item.documents as Record<string, unknown> | null
+      if (!doc) return null
+      
+      return {
+        id: doc.id,
+        storage_path: doc.file_path, // Use file_path as storage_path for compatibility
+        original_filename: doc.original_filename,
+        mime_type: doc.mime_type,
+        size_bytes: null, // May not exist in base schema
+      }
+    })
+    .filter(Boolean)
+
+  console.log('[getTransactionDocuments] Flattened documents:', documents)
+
+  return documents
+}
+
+/**
+ * Generate a signed URL for a document
+ * 
+ * Creates a temporary signed URL (1 hour expiry) for secure document access.
+ * Only works for documents owned by the authenticated user (RLS enforced).
+ */
+export async function getDocumentSignedUrl(storagePath: string): Promise<string | null> {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    console.log('[getDocumentSignedUrl] No user found')
+    return null
+  }
+
+  console.log('[getDocumentSignedUrl] Generating signed URL for:', storagePath)
+
+  // Verify user owns this document (via RLS)
+  const { data: document } = await supabase
+    .from('documents')
+    .select('id, storage_bucket')
+    .eq('storage_path', storagePath)
+    .eq('user_id', user.id)
+    .single()
+
+  if (!document) {
+    console.error('[getDocumentSignedUrl] Document not found or access denied for path:', storagePath)
+    return null
+  }
+
+  console.log('[getDocumentSignedUrl] Document found, bucket:', document.storage_bucket)
+
+  const { data, error } = await supabase.storage
+    .from(document.storage_bucket)
+    .createSignedUrl(storagePath, 3600) // 1 hour expiry
+
+  if (error || !data) {
+    console.error('[getDocumentSignedUrl] Failed to create signed URL:', error)
+    return null
+  }
+
+  console.log('[getDocumentSignedUrl] Signed URL created successfully')
+
+  return data.signedUrl
 }

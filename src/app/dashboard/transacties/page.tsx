@@ -20,6 +20,7 @@ import { useActiveYear } from '@/contexts/YearContext'
 import styles from './transacties.module.css'
 import Drawer from '@/components/Drawer'
 import TransactionForm from '@/components/TransactionForm'
+import TransactionDetailsPanel from '@/components/TransactionDetailsPanel'
 import TransactionFilter from '@/components/dashboard/TransactionFilter'
 import TransactionList from '@/components/dashboard/TransactionList'
 import KPIBadge from '@/components/dashboard/KPIBadge'
@@ -27,6 +28,7 @@ import MonthSelector from '@/components/dashboard/MonthSelector'
 import { getTransactionsWithTotals } from '../actions'
 
 type FilterType = 'ALLES' | 'INKOMSTEN' | 'UITGAVEN'
+type PanelType = 'none' | 'new' | 'details'
 
 interface Transaction {
   id: string
@@ -43,7 +45,8 @@ interface Transaction {
 export default function TransactiesPage() {
   const { activeYear } = useActiveYear()
   
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [panelType, setPanelType] = useState<PanelType>('none')
+  const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null)
   const [activeFilter, setActiveFilter] = useState<FilterType>('ALLES')
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -57,10 +60,6 @@ export default function TransactiesPage() {
   
   // Month filter state
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null)
-  
-  // Edit mode state
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
-  const [drawerMode, setDrawerMode] = useState<'create' | 'edit'>('create')
 
   // Set default month based on active year
   useEffect(() => {
@@ -98,35 +97,28 @@ export default function TransactiesPage() {
   })
 
   const handleTransactionSuccess = async () => {
-    setIsDrawerOpen(false)
+    setPanelType('none')
+    setSelectedTransactionId(null)
     await loadTransactions() // Reload transactions and totals after adding/editing/deleting
   }
 
   // Handler for clicking "Nieuwe Transactie" button
   const handleNewTransaction = () => {
-    setSelectedTransaction(null)
-    setDrawerMode('create')
-    setIsDrawerOpen(true)
+    setPanelType('new')
+    setSelectedTransactionId(null)
   }
 
   // Handler for clicking an existing transaction
   const handleTransactionClick = (transaction: Transaction) => {
-    setSelectedTransaction(transaction)
-    setDrawerMode('edit')
-    setIsDrawerOpen(true)
+    setPanelType('details')
+    setSelectedTransactionId(transaction.id)
   }
 
-  // Prepare initial values for edit mode
-  const initialValues = selectedTransaction ? {
-    type_transactie: selectedTransaction.type_transactie,
-    datum: selectedTransaction.datum,
-    bedrag: selectedTransaction.bedrag,
-    omschrijving: selectedTransaction.omschrijving,
-    btw_tarief: selectedTransaction.btw_tarief,
-    categorie: selectedTransaction.categorie,
-    vat_treatment: selectedTransaction.vat_treatment,
-    bon_url: selectedTransaction.bon_url
-  } : undefined
+  // Handler for closing any panel
+  const handleClosePanel = () => {
+    setPanelType('none')
+    setSelectedTransactionId(null)
+  }
 
   // Determine KPI badge type for resultaat
   const getResultaatType = () => {
@@ -190,17 +182,32 @@ export default function TransactiesPage() {
         )}
       </main>
 
+
+      {/* New Transaction Drawer */}
       <Drawer 
-        isOpen={isDrawerOpen} 
-        onClose={() => setIsDrawerOpen(false)}
-        title={drawerMode === 'create' ? 'Nieuwe Transactie' : 'Transactie bewerken'}
+        isOpen={panelType === 'new'} 
+        onClose={handleClosePanel}
+        title="Nieuwe Transactie"
       >
         <TransactionForm 
-          mode={drawerMode}
-          transactionId={selectedTransaction?.id}
-          initialValues={initialValues}
+          mode="create"
           onSuccess={handleTransactionSuccess} 
         />
+      </Drawer>
+
+      {/* Transaction Details Drawer */}
+      <Drawer 
+        isOpen={panelType === 'details'} 
+        onClose={handleClosePanel}
+        title="Transactie details"
+      >
+        {selectedTransactionId && (
+          <TransactionDetailsPanel
+            transactionId={selectedTransactionId}
+            onClose={handleClosePanel}
+            onSuccess={handleTransactionSuccess}
+          />
+        )}
       </Drawer>
     </div>
   )

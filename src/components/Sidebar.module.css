@@ -187,3 +187,29 @@
     display: block;
   }
 }
+
+/* Disabled navigation items */
+.link.disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.link.disabled:hover {
+  background-color: transparent;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Working on it badge */
+.badge {
+  margin-left: auto;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.625rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.5);
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+

@@ -1,12 +1,4 @@
 .page {
-  --background: #fafafa;
-  --foreground: #000; /* Assuming this was intended for light mode */
-  --gray-100: #f2f2f2;
-  --gray-200: #e5e5e5;
-  --gray-500: #888; /* Placeholder, adjust as needed */
-  --accent: #007aff; /* Apple blue */
-  --accent-hover: #005bb5; /* Darker blue for hover */
-
   display: flex;
   min-height: 100vh;
   flex-direction: column;
@@ -14,7 +6,7 @@
   justify-content: center;
   padding: 2rem;
   background-color: var(--background);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 }
 
 .main {
@@ -58,12 +50,13 @@
   font-weight: 500;
   font-size: 16px;
   transition: all 0.2s;
-  text-decoration: none; /* Ensure links don't have underlines */
+  text-decoration: none;
 }
 
 .primary:hover {
   background-color: var(--accent-hover);
   transform: scale(1.02);
+  opacity: 1;
 }
 
 .secondary {
@@ -74,16 +67,11 @@
   font-weight: 500;
   font-size: 16px;
   transition: all 0.2s;
-  text-decoration: none; /* Ensure links don't have underlines */
+  text-decoration: none;
 }
 
 .secondary:hover {
   background-color: var(--gray-200);
+  opacity: 1;
 }
 
-@media (prefers-color-scheme: dark) {
-  .page {
-    --background: #000;
-    --button-secondary-border: #1a1a1a;
-  }
-}
