@@ -348,7 +348,7 @@ export async function extractTransactionFromDocument(formData: FormData) {
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
 
     const promptText = `
-      Extract structured transaction data from this invoice/receipt for bookkeeping.
+      Extract structured transaction data from this invoice/receipt for Dutch bookkeeping.
       Return ONLY valid JSON matching this schema:
       {
         "date": "YYYY-MM-DD" | null,
@@ -367,27 +367,47 @@ export async function extractTransactionFromDocument(formData: FormData) {
         "confidence_notes": string[]
       }
 
-      Rules for vat_treatment:
-      - "domestic": If Dutch VAT is clearly present on the invoice (BTW number starts with NL, or VAT breakdown shown)
-      - "foreign_service_reverse_charge": If supplier appears to be non-Dutch (no NL VAT number) AND this looks like a service/SaaS (not goods) AND VAT is 0 or missing. Set vat_rate=21 and amount_includes_vat=false in this case.
-      - "unknown": If uncertain about VAT treatment
-
-      Rules for eu_location (CRITICAL for Dutch VAT reporting rubrics 4a/4b):
-      - "EU": If supplier VAT ID starts with EU country code (BE, DE, FR, IT, ES, etc.) OR address shows EU country
-      - "NON_EU": If supplier is clearly from outside EU (US, UK, CH, SG, etc.) OR VAT ID shows non-EU country  
-      - "UNKNOWN": If supplier location cannot be determined from invoice
+      CRITICAL RULES for vat_treatment (READ CAREFULLY):
       
-      For supplier_country_code: Extract 2-letter ISO code if visible (NL, BE, DE, US, GB, etc.)
+      1. "foreign_service_reverse_charge" if ANY of these conditions are met:
+         - Invoice explicitly mentions "reverse charge", "reverse VAT", "customer to account for VAT", or similar
+         - Supplier address is outside Netherlands (check city, postal code, country)
+         - Supplier is a SaaS/software/online service company (like Supabase, Vercel, AWS, etc.)
+         - No Dutch VAT (BTW) shown on invoice AND supplier appears foreign
+         - Invoice shows GST, Sales Tax, or other non-EU tax instead of VAT
+         When this applies: Set vat_rate=21 and amount_includes_vat=false
+      
+      2. "domestic" ONLY if:
+         - Supplier has NL VAT number (starts with NL) OR
+         - Invoice clearly shows Dutch BTW breakdown OR
+         - Supplier address is clearly in Netherlands with Dutch postal code
+      
+      3. "unknown" if genuinely uncertain
 
-      For category, suggest the most appropriate based on invoice content:
+      CRITICAL RULES for eu_location (for Dutch VAT reporting):
+      
+      1. "NON_EU" if supplier is from:
+         - Singapore (SG), United States (US), United Kingdom (UK), Switzerland (CH), Norway (NO), Canada (CA), Australia (AU), etc.
+         - ANY country outside the European Union
+         - Check the supplier's full address carefully - city and country are key indicators
+      
+      2. "EU" if supplier is from EU countries:
+         - Belgium (BE), Germany (DE), France (FR), Italy (IT), Spain (ES), Austria (AT), Denmark (DK), Sweden (SE), etc.
+         - Must be an EU member state (UK is NOT EU since Brexit)
+      
+      3. "UNKNOWN" only if you cannot determine the country from the invoice
+
+      For supplier_country_code: Extract 2-letter ISO code (NL, SG, US, GB, DE, etc.)
+      Look at the full supplier address - the city and postal code format are strong indicators.
+
+      For category, suggest based on invoice content:
       - "Inkoop": Purchase of goods for resale
       - "Sales": Income/revenue (rare for expenses)
       - "Reiskosten": Travel, fuel, parking, hotels
-      - "Kantoor": Office supplies, software, subscriptions
+      - "Kantoor": Office supplies, software, subscriptions, SaaS services
       - "Overig": Everything else
 
-      If a field cannot be determined, use null.
-      Add confidence_notes for any uncertainties or assumptions made.
+      Add confidence_notes for any uncertainties or key observations (e.g., "Supplier address shows Singapore", "Reverse charge mentioned in memo").
     `
 
     const result = await model.generateContent([
