@@ -2,12 +2,12 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { TrendingUp, Receipt, FileText, Settings, LogOut, Menu, X, Calculator } from 'lucide-react'
 import styles from './Sidebar.module.css'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
+import LogoWhite from '@/assets/Logo white.svg'
 
 export default function Sidebar() {
   const pathname = usePathname()
@@ -53,12 +53,10 @@ export default function Sidebar() {
       <aside className={`${styles.sidebar} ${isMobileOpen ? styles.open : ''}`}>
         <div className={styles.header}>
           <Link href="/dashboard" className={styles.logo}>
-            <Image 
-              src="/centjes-logo.png" 
-              alt="Centjes" 
-              width={28} 
-              height={28}
-              priority
+            <img 
+              src={LogoWhite.src} 
+              alt="Centjes Logo" 
+              style={{ height: '32px', width: 'auto' }}
             />
             <span>Centjes</span>
           </Link>

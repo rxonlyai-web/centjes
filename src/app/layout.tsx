@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Centjes - Boekhouding. Simpel.",
   description: "De moderne boekhoudtool voor ZZP'ers en VOF's.",
+  icons: {
+    icon: "/Favicon dark blue.svg",
+  },
 };
 
 export const viewport = {

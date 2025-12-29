@@ -120,11 +120,19 @@ export async function createTransactionFromReceipt(formData: FormData) {
       Extract structured data from this invoice/receipt.
       Return ONLY valid JSON matching this schema:
       {
-        "supplier": { "name": string|null, "vat_id": string|null },
+        "supplier": { "name": string|null, "vat_id": string|null, "country_code": string|null },
         "invoice": { "invoice_number": string|null, "issue_date": "YYYY-MM-DD"|null, "currency": "EUR"|"USD"|null },
         "amounts": { "total": number|null, "subtotal": number|null, "vat_total": number|null },
-        "vat": { "rate": 0|9|21|null, "reverse_charge": boolean|null, "amount_includes_vat": boolean|null }
+        "vat": { "rate": 0|9|21|null, "reverse_charge": boolean|null, "amount_includes_vat": boolean|null },
+        "eu_location": "EU"|"NON_EU"|"UNKNOWN"
       }
+      
+      Rules for eu_location (CRITICAL for Dutch VAT reporting):
+      - "EU": If supplier VAT ID starts with EU country code (BE, DE, FR, etc.) OR address shows EU country
+      - "NON_EU": If supplier is clearly from outside EU (US, UK, CH, etc.) OR VAT ID shows non-EU country
+      - "UNKNOWN": If supplier location cannot be determined
+      
+      For supplier.country_code: Extract 2-letter ISO code if visible (NL, BE, DE, US, etc.)
       If a field is missing, use null. Infer currency if possible (default EUR for Netherlands).
     `
 
@@ -182,10 +190,16 @@ export async function createTransactionFromReceipt(formData: FormData) {
     const invoiceNumber = invoice.invoice_number || ''
     const omschrijving = `${supplierName} ${invoiceNumber}`.trim()
 
-    // Determine VAT rate
+    // Determine VAT rate and treatment
     let btw_tarief = 21 // default
+    let vat_treatment = 'domestic' // default
+    let eu_location = null
+    
     if (vat.reverse_charge === true) {
       btw_tarief = 0
+      vat_treatment = 'foreign_service_reverse_charge'
+      // Extract EU location from the AI response
+      eu_location = extractedJson.eu_location || 'UNKNOWN'
     } else if (vat.rate !== null && vat.rate !== undefined) {
       btw_tarief = vat.rate
     }
@@ -198,6 +212,8 @@ export async function createTransactionFromReceipt(formData: FormData) {
       omschrijving,
       categorie: 'Overig',
       btw_tarief,
+      vat_treatment,
+      eu_location,
       type_transactie: 'UITGAVEN',
       bon_url: uploadData.path, // Store the storage path, not public URL
     }
@@ -339,11 +355,14 @@ export async function extractTransactionFromDocument(formData: FormData) {
         "amount": number | null,
         "description": string | null,
         "supplier_name": string | null,
+        "supplier_vat_id": string | null,
+        "supplier_country_code": string | null,
         "vat": {
           "vat_treatment": "domestic" | "foreign_service_reverse_charge" | "unknown",
           "vat_rate": 0 | 9 | 21 | null,
           "amount_includes_vat": boolean | null
         },
+        "eu_location": "EU" | "NON_EU" | "UNKNOWN",
         "category": "Inkoop" | "Sales" | "Reiskosten" | "Kantoor" | "Overig" | null,
         "confidence_notes": string[]
       }
@@ -352,6 +371,13 @@ export async function extractTransactionFromDocument(formData: FormData) {
       - "domestic": If Dutch VAT is clearly present on the invoice (BTW number starts with NL, or VAT breakdown shown)
       - "foreign_service_reverse_charge": If supplier appears to be non-Dutch (no NL VAT number) AND this looks like a service/SaaS (not goods) AND VAT is 0 or missing. Set vat_rate=21 and amount_includes_vat=false in this case.
       - "unknown": If uncertain about VAT treatment
+
+      Rules for eu_location (CRITICAL for Dutch VAT reporting rubrics 4a/4b):
+      - "EU": If supplier VAT ID starts with EU country code (BE, DE, FR, IT, ES, etc.) OR address shows EU country
+      - "NON_EU": If supplier is clearly from outside EU (US, UK, CH, SG, etc.) OR VAT ID shows non-EU country  
+      - "UNKNOWN": If supplier location cannot be determined from invoice
+      
+      For supplier_country_code: Extract 2-letter ISO code if visible (NL, BE, DE, US, GB, etc.)
 
       For category, suggest the most appropriate based on invoice content:
       - "Inkoop": Purchase of goods for resale
@@ -491,6 +517,7 @@ export async function createTransaction(formData: FormData) {
   const omschrijving = formData.get('omschrijving') as string
   const type_transactie = formData.get('type_transactie') as string
   const vat_treatment = (formData.get('vat_treatment') as string) || 'domestic'
+  const eu_location = (formData.get('eu_location') as string) || null
   const btw_tariefStr = formData.get('btw_tarief') as string
   const categorie = formData.get('categorie') as string
   const receiptFile = formData.get('receipt') as File | null
@@ -548,6 +575,9 @@ export async function createTransaction(formData: FormData) {
     bon_url = publicUrl
   }
 
+  // Parse eu_location properly - convert empty string to null
+  const parsedEuLocation = eu_location && eu_location !== '' ? eu_location : null
+
   const rawData = {
     gebruiker_id: user.id,
     datum: new Date(datum).toISOString(),
@@ -555,6 +585,7 @@ export async function createTransaction(formData: FormData) {
     omschrijving,
     type_transactie,
     vat_treatment,
+    eu_location: vat_treatment === 'foreign_service_reverse_charge' ? parsedEuLocation : null,
     btw_tarief,
     categorie,
     bon_url,
@@ -569,7 +600,8 @@ export async function createTransaction(formData: FormData) {
 
   if (error) {
     console.error('Supabase error:', error)
-    throw new Error('Kon transactie niet opslaan. Probeer het opnieuw.')
+    console.error('Attempted to insert:', rawData)
+    throw new Error(`Kon transactie niet opslaan: ${error.message}`)
   }
 
   // Link document if bon_url was set from upload flow
@@ -640,6 +672,7 @@ export async function updateTransaction(transactionId: string, formData: FormDat
   const omschrijving = formData.get('omschrijving') as string
   const type_transactie = formData.get('type_transactie') as string
   const vat_treatment = (formData.get('vat_treatment') as string) || 'domestic'
+  const eu_location = (formData.get('eu_location') as string) || null
   const btw_tariefStr = formData.get('btw_tarief') as string
   const categorie = formData.get('categorie') as string
   const receiptFile = formData.get('receipt') as File | null
@@ -709,12 +742,16 @@ export async function updateTransaction(transactionId: string, formData: FormDat
     bon_url = publicUrl
   }
 
+  // Parse eu_location properly - convert empty string to null
+  const parsedEuLocation = eu_location && eu_location !== '' ? eu_location : null
+
   const updateData = {
     datum: new Date(datum).toISOString(),
     bedrag,
     omschrijving,
     type_transactie,
     vat_treatment,
+    eu_location: vat_treatment === 'foreign_service_reverse_charge' ? parsedEuLocation : null,
     btw_tarief,
     categorie,
     bon_url,
@@ -729,7 +766,8 @@ export async function updateTransaction(transactionId: string, formData: FormDat
 
   if (error) {
     console.error('Supabase error:', error)
-    throw new Error('Kon transactie niet bijwerken. Probeer het opnieuw.')
+    console.error('Attempted to update:', updateData)
+    throw new Error(`Kon transactie niet bijwerken: ${error.message}`)
   }
 
   // Revalidate all affected pages

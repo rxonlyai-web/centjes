@@ -30,6 +30,7 @@ interface TransactionFormProps {
     btw_tarief: number
     categorie: string
     vat_treatment?: 'domestic' | 'foreign_service_reverse_charge'
+    eu_location?: 'EU' | 'NON_EU' | 'UNKNOWN'
     bon_url?: string
   }
 }
@@ -55,6 +56,9 @@ export default function TransactionForm({
   )
   const [vatTreatment, setVatTreatment] = useState<'domestic' | 'foreign_service_reverse_charge'>(
     initialValues?.vat_treatment || 'domestic'
+  )
+  const [euLocation, setEuLocation] = useState<'EU' | 'NON_EU' | 'UNKNOWN'>(
+    initialValues?.eu_location || 'UNKNOWN'
   )
   const [btwTarief, setBtwTarief] = useState(
     initialValues?.btw_tarief?.toString() || '21'
@@ -110,6 +114,11 @@ export default function TransactionForm({
         if (treatment === 'domestic' || treatment === 'foreign_service_reverse_charge') {
           setVatTreatment(treatment)
         }
+      }
+      
+      // Extract EU location if available
+      if (result.extracted.eu_location) {
+        setEuLocation(result.extracted.eu_location)
       }
       
       if (result.extracted.vat?.vat_rate !== null && result.extracted.vat?.vat_rate !== undefined) {
@@ -191,6 +200,12 @@ export default function TransactionForm({
     formData.set('bedrag', bedrag)
     formData.set('omschrijving', omschrijving)
     formData.set('vat_treatment', vatTreatment)
+    
+    // Only set eu_location if it's a reverse charge transaction and has a value
+    if (vatTreatment === 'foreign_service_reverse_charge' && euLocation) {
+      formData.set('eu_location', euLocation)
+    }
+    
     formData.set('btw_tarief', btwTarief)
     formData.set('categorie', categorie)
     
@@ -402,9 +417,30 @@ export default function TransactionForm({
             <option value="foreign_service_reverse_charge">Btw verlegd – diensten uit het buitenland</option>
           </select>
           {vatTreatment === 'foreign_service_reverse_charge' && (
-            <p className={styles.helperText}>
-              Gebruik dit voor diensten uit het buitenland zonder btw op de factuur (bijv. Lovable, Figma, online software). De btw wordt in Nederland verlegd.
-            </p>
+            <>
+              <p className={styles.helperText}>
+                Gebruik dit voor diensten uit het buitenland zonder btw op de factuur (bijv. Lovable, Figma, online software). De btw wordt in Nederland verlegd.
+              </p>
+              
+              {/* EU Location selector */}
+              <div className={styles.field} style={{ marginTop: '1rem' }}>
+                <label htmlFor="eu_location" className={styles.label}>Locatie leverancier</label>
+                <select
+                  id="eu_location"
+                  name="eu_location"
+                  className={styles.select}
+                  value={euLocation}
+                  onChange={(e) => setEuLocation(e.target.value as 'EU' | 'NON_EU' | 'UNKNOWN')}
+                >
+                  <option value="UNKNOWN">Onbekend (handmatig te classificeren)</option>
+                  <option value="EU">EU-land (rubric 4b)</option>
+                  <option value="NON_EU">Niet-EU land (rubric 4a)</option>
+                </select>
+                <p className={styles.helperText}>
+                  Voor correcte btw-aangifte: selecteer EU voor leveranciers uit EU-landen, of Niet-EU voor leveranciers buiten de EU.
+                </p>
+              </div>
+            </>
           )}
         </div>
       )}

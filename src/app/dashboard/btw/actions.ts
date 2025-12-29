@@ -14,9 +14,19 @@ export interface VATSummary {
   btw_21: number          // VAT amount at 21% rate
   omzet_9: number         // Revenue at 9% VAT rate (excluding VAT)
   btw_9: number           // VAT amount at 9% rate
-  foreign_services_base: number // Base amount for foreign services (reverse charge)
-  foreign_services_vat: number  // VAT amount for foreign services (21%)
-  voorbelasting: number   // Deductible VAT on business expenses
+  
+  // Rubric 4a - Services from non-EU countries (reverse charge)
+  rubric_4a_turnover: number
+  rubric_4a_vat: number
+  
+  // Rubric 4b - Services from EU countries (reverse charge)
+  rubric_4b_turnover: number
+  rubric_4b_vat: number
+  
+  // Transactions with UNKNOWN eu_location (requires manual review)
+  incomplete_reverse_charge_count: number
+  
+  voorbelasting: number   // Deductible VAT on business expenses (rubric 5b - EXCLUDING reverse charge)
   netto_btw: number       // Net VAT (positive = to pay, negative = refund)
   transaction_count: number
 }
@@ -27,6 +37,7 @@ interface Transaction {
   type_transactie: 'INKOMSTEN' | 'UITGAVEN'
   btw_tarief: number
   vat_treatment?: 'domestic' | 'foreign_service_reverse_charge'
+  eu_location?: 'EU' | 'NON_EU' | 'UNKNOWN' | null
 }
 
 /**
@@ -96,8 +107,11 @@ export async function getVATSummary(year: number, quarter: 1 | 2 | 3 | 4): Promi
       btw_21: 0,
       omzet_9: 0,
       btw_9: 0,
-      foreign_services_base: 0,
-      foreign_services_vat: 0,
+      rubric_4a_turnover: 0,
+      rubric_4a_vat: 0,
+      rubric_4b_turnover: 0,
+      rubric_4b_vat: 0,
+      incomplete_reverse_charge_count: 0,
       voorbelasting: 0,
       netto_btw: 0,
       transaction_count: 0,
@@ -110,7 +124,7 @@ export async function getVATSummary(year: number, quarter: 1 | 2 | 3 | 4): Promi
   // Fetch all transactions for this user in the date range
   const { data: transactions, error } = await supabase
     .from('transacties')
-    .select('datum, bedrag, type_transactie, btw_tarief, vat_treatment')
+    .select('datum, bedrag, type_transactie, btw_tarief, vat_treatment, eu_location')
     .eq('gebruiker_id', user.id)
     .gte('datum', start)
     .lte('datum', end)
@@ -122,8 +136,11 @@ export async function getVATSummary(year: number, quarter: 1 | 2 | 3 | 4): Promi
       btw_21: 0,
       omzet_9: 0,
       btw_9: 0,
-      foreign_services_base: 0,
-      foreign_services_vat: 0,
+      rubric_4a_turnover: 0,
+      rubric_4a_vat: 0,
+      rubric_4b_turnover: 0,
+      rubric_4b_vat: 0,
+      incomplete_reverse_charge_count: 0,
       voorbelasting: 0,
       netto_btw: 0,
       transaction_count: 0,
@@ -135,13 +152,16 @@ export async function getVATSummary(year: number, quarter: 1 | 2 | 3 | 4): Promi
   let btw_21 = 0
   let omzet_9 = 0
   let btw_9 = 0
-  let foreign_services_base = 0
-  let foreign_services_vat = 0
+  let rubric_4a_turnover = 0
+  let rubric_4a_vat = 0
+  let rubric_4b_turnover = 0
+  let rubric_4b_vat = 0
+  let incomplete_reverse_charge_count = 0
   let voorbelasting = 0
 
   // Process each transaction
   for (const transaction of (transactions as Transaction[])) {
-    const { bedrag, type_transactie, btw_tarief, vat_treatment } = transaction
+    const { bedrag, type_transactie, btw_tarief, vat_treatment, eu_location } = transaction
 
     if (type_transactie === 'INKOMSTEN') {
       // Income: calculate revenue and VAT collected
@@ -159,18 +179,30 @@ export async function getVATSummary(year: number, quarter: 1 | 2 | 3 | 4): Promi
       // Expenses: calculate deductible VAT (voorbelasting)
       
       if (vat_treatment === 'foreign_service_reverse_charge') {
-        // Reverse charge: 
-        // 1. Amount is net base
-        // 2. Calculate 21% VAT
-        // 3. Add to foreign_services_vat (owed) AND voorbelasting (deductible)
+        // Reverse charge: Split by EU location for proper rubric assignment
         const base = bedrag
         const vat = base * 0.21
         
-        foreign_services_base += base
-        foreign_services_vat += vat
-        voorbelasting += vat
+        if (eu_location === 'NON_EU') {
+          // Rubric 4a - Services from non-EU countries
+          rubric_4a_turnover += base
+          rubric_4a_vat += vat
+        } else if (eu_location === 'EU') {
+          // Rubric 4b - Services from EU countries
+          rubric_4b_turnover += base
+          rubric_4b_vat += vat
+        } else {
+          // UNKNOWN or null - flag for manual review
+          incomplete_reverse_charge_count++
+          // Still calculate VAT but don't assign to rubric
+          // This will be visible in the UI as incomplete
+        }
+        
+        // IMPORTANT: Reverse-charged VAT is NOT added to standard voorbelasting (rubric 5b)
+        // It's handled separately in rubrics 4a/4b
+        
       } else if (btw_tarief === 21 || btw_tarief === 9) {
-        // Domestic standard/reduced rate
+        // Domestic standard/reduced rate - this goes to rubric 5b
         const { vatAmount } = calculateVAT(bedrag, btw_tarief)
         voorbelasting += vatAmount
       }
@@ -181,16 +213,22 @@ export async function getVATSummary(year: number, quarter: 1 | 2 | 3 | 4): Promi
   // Calculate net VAT
   // Positive = VAT to pay to Belastingdienst
   // Negative = VAT refund to claim
-  // Netto = (Domestic VAT Owed + Foreign VAT Owed) - Input VAT
-  const netto_btw = (btw_21 + btw_9 + foreign_services_vat) - voorbelasting
+  // 
+  // Netto = (Domestic VAT Owed + Rubric 4a VAT + Rubric 4b VAT) - (Standard Input VAT + Rubric 4a VAT + Rubric 4b VAT)
+  // The rubric 4a/4b VAT appears on both sides, so it cancels out (zero net effect)
+  const total_reverse_charge_vat = rubric_4a_vat + rubric_4b_vat
+  const netto_btw = (btw_21 + btw_9 + total_reverse_charge_vat) - (voorbelasting + total_reverse_charge_vat)
 
   return {
     omzet_21: Math.round(omzet_21 * 100) / 100,
     btw_21: Math.round(btw_21 * 100) / 100,
     omzet_9: Math.round(omzet_9 * 100) / 100,
     btw_9: Math.round(btw_9 * 100) / 100,
-    foreign_services_base: Math.round(foreign_services_base * 100) / 100,
-    foreign_services_vat: Math.round(foreign_services_vat * 100) / 100,
+    rubric_4a_turnover: Math.round(rubric_4a_turnover * 100) / 100,
+    rubric_4a_vat: Math.round(rubric_4a_vat * 100) / 100,
+    rubric_4b_turnover: Math.round(rubric_4b_turnover * 100) / 100,
+    rubric_4b_vat: Math.round(rubric_4b_vat * 100) / 100,
+    incomplete_reverse_charge_count,
     voorbelasting: Math.round(voorbelasting * 100) / 100,
     netto_btw: Math.round(netto_btw * 100) / 100,
     transaction_count: transactions?.length || 0,

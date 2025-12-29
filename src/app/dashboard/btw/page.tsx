@@ -125,30 +125,82 @@ export default function BTWPage() {
                     <td className={styles.tableCellRight}>{formatCurrency(summary.voorbelasting)}</td>
                   </tr>
 
-                  {/* Reverse Charge Section */}
-                  {(summary.foreign_services_base > 0 || summary.foreign_services_vat > 0) && (
+                  {/* Reverse Charge Section - Rubrics 4a and 4b */}
+                  {(summary.rubric_4a_turnover > 0 || summary.rubric_4b_turnover > 0 || summary.incomplete_reverse_charge_count > 0) && (
                     <>
                       <tr className={styles.tableRow} style={{ backgroundColor: 'var(--bg-subtle)' }}>
                         <td className={styles.tableCell} colSpan={2} style={{ paddingTop: '1.5rem', paddingBottom: '0.5rem', fontWeight: 600 }}>
                           Verlegde btw – diensten uit het buitenland
                         </td>
                       </tr>
-                      <tr className={styles.tableRow}>
-                        <td className={styles.tableCell} style={{ paddingLeft: '1.5rem' }}>Grondslag diensten</td>
-                        <td className={styles.tableCellRight}>{formatCurrency(summary.foreign_services_base)}</td>
-                      </tr>
-                      <tr className={styles.tableRow}>
-                        <td className={styles.tableCell} style={{ paddingLeft: '1.5rem' }}>Verschuldigde btw 21%</td>
-                        <td className={styles.tableCellRight}>{formatCurrency(summary.foreign_services_vat)}</td>
-                      </tr>
-                      <tr className={styles.tableRow}>
-                        <td className={styles.tableCell} style={{ paddingLeft: '1.5rem' }}>Voorbelasting (reeds verwerkt in totaal)</td>
-                        <td className={styles.tableCellRight}>{formatCurrency(summary.foreign_services_vat)}</td>
-                      </tr>
-                      <tr className={styles.tableRow} style={{ borderBottom: '2px solid var(--border-color)' }}>
-                        <td className={styles.tableCell} style={{ paddingLeft: '1.5rem', fontStyle: 'italic' }}>Netto effect</td>
-                        <td className={styles.tableCellRight}>€ 0,00</td>
-                      </tr>
+                      
+                      {/* Rubric 4a - NON_EU */}
+                      {summary.rubric_4a_turnover > 0 && (
+                        <>
+                          <tr className={styles.tableRow}>
+                            <td className={styles.tableCell} style={{ paddingLeft: '1.5rem', fontWeight: 500 }}>
+                              Rubric 4a – Diensten uit niet-EU landen
+                            </td>
+                            <td className={styles.tableCellRight}></td>
+                          </tr>
+                          <tr className={styles.tableRow}>
+                            <td className={styles.tableCell} style={{ paddingLeft: '2rem' }}>Grondslag diensten</td>
+                            <td className={styles.tableCellRight}>{formatCurrency(summary.rubric_4a_turnover)}</td>
+                          </tr>
+                          <tr className={styles.tableRow}>
+                            <td className={styles.tableCell} style={{ paddingLeft: '2rem' }}>Verschuldigde btw 21%</td>
+                            <td className={styles.tableCellRight}>{formatCurrency(summary.rubric_4a_vat)}</td>
+                          </tr>
+                        </>
+                      )}
+                      
+                      {/* Rubric 4b - EU */}
+                      {summary.rubric_4b_turnover > 0 && (
+                        <>
+                          <tr className={styles.tableRow}>
+                            <td className={styles.tableCell} style={{ paddingLeft: '1.5rem', fontWeight: 500 }}>
+                              Rubric 4b – Diensten uit EU-landen
+                            </td>
+                            <td className={styles.tableCellRight}></td>
+                          </tr>
+                          <tr className={styles.tableRow}>
+                            <td className={styles.tableCell} style={{ paddingLeft: '2rem' }}>Grondslag diensten</td>
+                            <td className={styles.tableCellRight}>{formatCurrency(summary.rubric_4b_turnover)}</td>
+                          </tr>
+                          <tr className={styles.tableRow}>
+                            <td className={styles.tableCell} style={{ paddingLeft: '2rem' }}>Verschuldigde btw 21%</td>
+                            <td className={styles.tableCellRight}>{formatCurrency(summary.rubric_4b_vat)}</td>
+                          </tr>
+                        </>
+                      )}
+                      
+                      {/* Summary of reverse charge */}
+                      {(summary.rubric_4a_vat > 0 || summary.rubric_4b_vat > 0) && (
+                        <>
+                          <tr className={styles.tableRow}>
+                            <td className={styles.tableCell} style={{ paddingLeft: '1.5rem', fontStyle: 'italic' }}>
+                              Totaal verlegde btw (ook aftrekbaar)
+                            </td>
+                            <td className={styles.tableCellRight}>
+                              {formatCurrency(summary.rubric_4a_vat + summary.rubric_4b_vat)}
+                            </td>
+                          </tr>
+                          <tr className={styles.tableRow} style={{ borderBottom: '2px solid var(--border-color)' }}>
+                            <td className={styles.tableCell} style={{ paddingLeft: '1.5rem', fontStyle: 'italic' }}>Netto effect</td>
+                            <td className={styles.tableCellRight}>€ 0,00</td>
+                          </tr>
+                        </>
+                      )}
+                      
+                      {/* Warning for incomplete transactions */}
+                      {summary.incomplete_reverse_charge_count > 0 && (
+                        <tr className={styles.tableRow} style={{ backgroundColor: '#FEF3C7' }}>
+                          <td className={styles.tableCell} colSpan={2} style={{ padding: '1rem 1.5rem', color: '#92400E' }}>
+                            <strong>⚠️ Let op:</strong> {summary.incomplete_reverse_charge_count} transactie{summary.incomplete_reverse_charge_count !== 1 ? 's' : ''} met verlegde btw {summary.incomplete_reverse_charge_count !== 1 ? 'hebben' : 'heeft'} geen EU-locatie. 
+                            Deze {summary.incomplete_reverse_charge_count !== 1 ? 'moeten' : 'moet'} handmatig worden geclassificeerd als EU of niet-EU voor een correcte btw-aangifte.
+                          </td>
+                        </tr>
+                      )}
                     </>
                   )}
                   <tr className={`${styles.tableRow} ${styles.totalRow}`}>
@@ -169,7 +221,7 @@ export default function BTWPage() {
               <p>
                 <strong>Toelichting:</strong> Gebruik deze bedragen om je btw-aangifte bij de Belastingdienst in te vullen. 
                 Netto btw is de btw op je inkomsten minus de btw op je uitgaven (voorbelasting). 
-                {summary.foreign_services_vat > 0 && ' Btw op buitenlandse diensten wordt hierbij opgeteld en direct weer afgetrokken (verlegd).'}
+                {(summary.rubric_4a_vat > 0 || summary.rubric_4b_vat > 0) && ' Verlegde btw (rubrieken 4a/4b) wordt hierbij opgeteld en direct weer afgetrokken, dus heeft geen effect op het netto bedrag.'}
                 {summary.netto_btw >= 0 
                   ? ' Dit bedrag moet je betalen aan de Belastingdienst.'
                   : ' Dit bedrag kun je terugvragen van de Belastingdienst.'}
