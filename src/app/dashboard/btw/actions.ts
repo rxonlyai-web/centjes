@@ -26,7 +26,7 @@ export interface VATSummary {
   // Transactions with UNKNOWN eu_location (requires manual review)
   incomplete_reverse_charge_count: number
   
-  voorbelasting: number   // Deductible VAT on business expenses (rubric 5b - EXCLUDING reverse charge)
+  voorbelasting: number   // Domestic deductible VAT only (rubric 5b) - reverse-charge deduction is separate
   netto_btw: number       // Net VAT (positive = to pay, negative = refund)
   transaction_count: number
 }
@@ -210,12 +210,21 @@ export async function getVATSummary(year: number, quarter: 1 | 2 | 3 | 4): Promi
     }
   }
 
-  // Calculate net VAT
-  // Positive = VAT to pay to Belastingdienst
-  // Negative = VAT refund to claim
+  // Calculate net VAT according to Dutch tax form structure:
   // 
-  // Netto = (Domestic VAT Owed + Rubric 4a VAT + Rubric 4b VAT) - (Standard Input VAT + Rubric 4a VAT + Rubric 4b VAT)
-  // The rubric 4a/4b VAT appears on both sides, so it cancels out (zero net effect)
+  // Rubric 5a: Verschuldigde btw (Total VAT owed)
+  //   = Domestic VAT (21% + 9%) + Reverse-charge VAT (4a + 4b)
+  // 
+  // Rubric 5b: Voorbelasting (Domestic deductible VAT ONLY)
+  //   = Domestic input VAT (does NOT include reverse-charge)
+  // 
+  // Rubric 5c: Subtotaal (implicit in calculation)
+  //   = Reverse-charge VAT is deducted here (not shown in 5b)
+  // 
+  // Net VAT = (5a) - (5b + reverse-charge VAT)
+  //         = (btw_21 + btw_9 + reverse_charge) - (voorbelasting + reverse_charge)
+  //         = (btw_21 + btw_9) - voorbelasting
+  
   const total_reverse_charge_vat = rubric_4a_vat + rubric_4b_vat
   const netto_btw = (btw_21 + btw_9 + total_reverse_charge_vat) - (voorbelasting + total_reverse_charge_vat)
 
@@ -229,7 +238,7 @@ export async function getVATSummary(year: number, quarter: 1 | 2 | 3 | 4): Promi
     rubric_4b_turnover: Math.round(rubric_4b_turnover * 100) / 100,
     rubric_4b_vat: Math.round(rubric_4b_vat * 100) / 100,
     incomplete_reverse_charge_count,
-    voorbelasting: Math.round(voorbelasting * 100) / 100,
+    voorbelasting: Math.round(voorbelasting * 100) / 100,  // Domestic input VAT only (rubric 5b)
     netto_btw: Math.round(netto_btw * 100) / 100,
     transaction_count: transactions?.length || 0,
   }
