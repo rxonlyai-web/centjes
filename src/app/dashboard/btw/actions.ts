@@ -218,15 +218,14 @@ export async function getVATSummary(year: number, quarter: 1 | 2 | 3 | 4): Promi
   // Rubric 5b: Voorbelasting (Domestic deductible VAT ONLY)
   //   = Domestic input VAT (does NOT include reverse-charge)
   // 
-  // Rubric 5c: Subtotaal (implicit in calculation)
-  //   = Reverse-charge VAT is deducted here (not shown in 5b)
+  // Net VAT = 5a - 5b
+  //         = (btw_21 + btw_9 + reverse_charge) - voorbelasting
   // 
-  // Net VAT = (5a) - (5b + reverse-charge VAT)
-  //         = (btw_21 + btw_9 + reverse_charge) - (voorbelasting + reverse_charge)
-  //         = (btw_21 + btw_9) - voorbelasting
+  // NOTE: Reverse-charge VAT is OWED (in 5a) but NOT automatically deductible.
+  // It can be deducted separately, but that's handled elsewhere in the tax form.
   
   const total_reverse_charge_vat = rubric_4a_vat + rubric_4b_vat
-  const netto_btw = (btw_21 + btw_9 + total_reverse_charge_vat) - (voorbelasting + total_reverse_charge_vat)
+  const netto_btw = (btw_21 + btw_9 + total_reverse_charge_vat) - voorbelasting
 
   return {
     omzet_21: Math.round(omzet_21 * 100) / 100,
