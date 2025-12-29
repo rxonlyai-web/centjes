@@ -56,7 +56,7 @@ export default function Sidebar() {
             <img 
               src={LogoWhite.src} 
               alt="Centjes Logo" 
-              style={{ height: '32px', width: 'auto' }}
+              style={{ height: '48px', width: 'auto' }}
             />
             <span>Centjes</span>
           </Link>
