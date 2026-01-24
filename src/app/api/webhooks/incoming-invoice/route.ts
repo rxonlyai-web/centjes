@@ -114,7 +114,35 @@ export async function POST(request: NextRequest) {
       vatAmount = totalAmount - subtotal
     }
 
-    // 6. Insert invoice
+    // 6. Parse and validate date
+    let invoiceDate: string
+    let dueDate: string
+    
+    try {
+      // Try to parse the date from n8n
+      const parsedDate = new Date(body.date)
+      if (isNaN(parsedDate.getTime())) {
+        // Invalid date, use current date
+        console.warn('Invalid date received, using current date:', body.date)
+        invoiceDate = new Date().toISOString().split('T')[0]
+      } else {
+        invoiceDate = parsedDate.toISOString().split('T')[0]
+      }
+      
+      // Calculate due date (14 days from invoice date)
+      const dueDateObj = new Date(invoiceDate)
+      dueDateObj.setDate(dueDateObj.getDate() + 14)
+      dueDate = dueDateObj.toISOString().split('T')[0]
+    } catch (error) {
+      // Fallback to current date if parsing fails
+      console.error('Date parsing error:', error)
+      invoiceDate = new Date().toISOString().split('T')[0]
+      const dueDateObj = new Date()
+      dueDateObj.setDate(dueDateObj.getDate() + 14)
+      dueDate = dueDateObj.toISOString().split('T')[0]
+    }
+
+    // 7. Insert invoice
     const { data: invoice, error: insertError } = await supabase
       .from('invoices')
       .insert({
@@ -123,8 +151,8 @@ export async function POST(request: NextRequest) {
         status: 'draft',
         source: 'webhook',
         client_name: body.sender,
-        invoice_date: body.date,
-        due_date: new Date(new Date(body.date).getTime() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        invoice_date: invoiceDate,
+        due_date: dueDate,
         payment_terms: 'Betaling binnen 14 dagen',
         subtotal: subtotal.toFixed(2),
         vat_rate: vatRate,
