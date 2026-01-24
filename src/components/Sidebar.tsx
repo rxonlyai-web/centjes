@@ -74,20 +74,7 @@ export default function Sidebar() {
             const Icon = item.icon
             const isActive = pathname === item.href
             
-            if (item.disabled) {
-              return (
-                <div
-                  key={item.href}
-                  className={`${styles.link} ${styles.disabled}`}
-                  aria-disabled="true"
-                >
-                  <Icon size={20} />
-                  <span>{item.name}</span>
-                  <span className={styles.badge}>Working on it</span>
-                </div>
-              )
-            }
-            
+
             return (
               <Link
                 key={item.href}
@@ -97,9 +84,7 @@ export default function Sidebar() {
               >
                 <Icon size={20} />
                 <span>{item.name}</span>
-                {item.badge && item.badge > 0 && (
-                  <span className={styles.notificationBadge}>{item.badge}</span>
-                )}
+
               </Link>
             )
           })}
