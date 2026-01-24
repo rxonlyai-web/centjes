@@ -74,18 +74,47 @@ export async function POST(request: NextRequest) {
       }
     )
 
-    // Get the first user for webhook invoices
-    const { data: { users }, error: authError } = await supabase.auth.admin.listUsers()
-    
-    if (authError || !users || users.length === 0) {
-      console.error('Error fetching users:', authError)
+    // 3. Get recipient email and find user by Gmail connection
+    const recipientEmail = body.recipientEmail
+
+    if (!recipientEmail) {
       return NextResponse.json<WebhookErrorResponse>(
-        { success: false, error: 'No user found for invoice creation' },
-        { status: 500 }
+        { 
+          success: false, 
+          error: 'Missing recipient email',
+          details: 'recipientEmail is required to match user'
+        },
+        { status: 400 }
       )
     }
 
-    const userId = users[0].id
+    // Find user by Gmail connection
+    const { data: connection, error: connectionError } = await supabase
+      .from('user_gmail_connections')
+      .select('user_id')
+      .eq('gmail_address', recipientEmail.toLowerCase())
+      .eq('is_active', true)
+      .single()
+
+    if (connectionError || !connection) {
+      console.error('No active Gmail connection found for:', recipientEmail)
+      return NextResponse.json<WebhookErrorResponse>(
+        { 
+          success: false, 
+          error: 'No user found for this email address',
+          details: `No active connection for ${recipientEmail}`
+        },
+        { status: 404 }
+      )
+    }
+
+    const userId = connection.user_id
+
+    // Update last_sync_at
+    await supabase
+      .from('user_gmail_connections')
+      .update({ last_sync_at: new Date().toISOString() })
+      .eq('user_id', userId)
 
     // 4. Generate invoice number
     const { data: invoiceNumber, error: numberError } = await supabase

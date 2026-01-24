@@ -6,7 +6,10 @@ export interface IncomingInvoiceRequest {
   sender: string
   subject: string
   date: string
+  recipientEmail: string
   amount?: string | number
+  pdfData?: string
+  fileName?: string
 }
 
 export interface IncomingInvoiceResponse {

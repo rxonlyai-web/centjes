@@ -13,6 +13,7 @@
 import { useState, useEffect } from 'react'
 import { Check, Edit2, Save, X } from 'lucide-react'
 import { getCompanySettings, updateCompanySettings, type CompanySettingsInput } from './actions'
+import GmailIntegration from '@/components/GmailIntegration'
 import styles from './page.module.css'
 
 export default function InstellingenPage() {
@@ -381,6 +382,12 @@ export default function InstellingenPage() {
             </p>
           </div>
         </section>
+
+        {/* Gmail Integration */}
+        <section className={styles.section}>
+          <GmailIntegration />
+        </section>
+
       </form>
     </div>
   )
