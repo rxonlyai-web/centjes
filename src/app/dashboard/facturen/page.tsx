@@ -6,13 +6,13 @@
  * Shows all invoices with filtering, search, and status management
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Plus, Search, Eye, Trash2, FileText, Bot, Edit3, X } from 'lucide-react'
 import { getInvoices, updateInvoiceStatus, deleteInvoice, type Invoice } from './actions'
 import styles from './page.module.css'
 
-export default function FacturenPage() {
+function FacturenPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   
@@ -287,5 +287,13 @@ export default function FacturenPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function FacturenPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <FacturenPageContent />
+    </Suspense>
   )
 }
