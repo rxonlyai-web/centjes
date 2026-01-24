@@ -12,6 +12,7 @@
 import { ReactNode } from 'react'
 import Sidebar from '@/components/Sidebar'
 import YearSelector from '@/components/YearSelector'
+import TaxNotifications from '@/components/TaxNotifications'
 import { YearProvider } from '@/contexts/YearContext'
 import styles from './DashboardLayoutClient.module.css'
 
@@ -22,7 +23,11 @@ export default function DashboardLayoutClient({ children }: { children: ReactNod
         <Sidebar />
         <div className={styles.content}>
           <div className={styles.topBar}>
-            <YearSelector />
+            <div className={styles.topBarLeft}></div>
+            <div className={styles.topBarRight}>
+              <TaxNotifications />
+              <YearSelector />
+            </div>
           </div>
           <div className={styles.mainContent}>
             {children}

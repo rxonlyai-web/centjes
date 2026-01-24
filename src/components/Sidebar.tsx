@@ -24,8 +24,8 @@ export default function Sidebar() {
     { name: 'Dashboard', href: '/dashboard', icon: TrendingUp },
     { name: 'Transacties', href: '/dashboard/transacties', icon: Receipt },
     { name: 'BTW', href: '/dashboard/btw', icon: Calculator },
-    { name: 'Facturen', href: '/dashboard/facturen', icon: FileText, disabled: true },
-    { name: 'Instellingen', href: '/dashboard/instellingen', icon: Settings, disabled: true },
+    { name: 'Facturen', href: '/dashboard/facturen', icon: FileText },
+    { name: 'Instellingen', href: '/dashboard/instellingen', icon: Settings },
   ]
 
   const handleLinkClick = () => {
@@ -97,6 +97,9 @@ export default function Sidebar() {
               >
                 <Icon size={20} />
                 <span>{item.name}</span>
+                {item.badge && item.badge > 0 && (
+                  <span className={styles.notificationBadge}>{item.badge}</span>
+                )}
               </Link>
             )
           })}

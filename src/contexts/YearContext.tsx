@@ -25,10 +25,10 @@ interface YearContextType {
 const YearContext = createContext<YearContextType | undefined>(undefined)
 
 export function YearProvider({ children }: { children: ReactNode }) {
-  const currentYear = new Date().getFullYear()
-  
   // Initialize from localStorage or default to current year
   const [activeYear, setActiveYearState] = useState<number>(() => {
+    const currentYear = new Date().getFullYear()
+    
     // Only access localStorage on client side
     if (typeof window === 'undefined') return currentYear
     

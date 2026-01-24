@@ -1122,3 +1122,116 @@ export async function getDocumentSignedUrl(storagePath: string): Promise<string 
 
   return data.signedUrl
 }
+
+/**
+ * Get tax deadlines for a given year
+ * 
+ * Fetches or auto-generates the 5 standard Dutch tax deadlines:
+ * - Inkomstenbelasting (May 1st)
+ * - BTW Q1-Q4 (April 30, July 31, October 31, January 31)
+ */
+export async function getTaxDeadlines(year: number) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Je moet ingelogd zijn')
+  }
+
+  // Fetch existing deadlines for this year
+  const { data: existingDeadlines, error: fetchError } = await supabase
+    .from('tax_deadlines')
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('tax_year', year)
+    .order('deadline_date', { ascending: true })
+
+  if (fetchError) {
+    console.error('Error fetching deadlines:', fetchError)
+    throw new Error('Kon deadlines niet ophalen')
+  }
+
+  // If no deadlines exist, generate them
+  if (!existingDeadlines || existingDeadlines.length === 0) {
+    const deadlinesToCreate = [
+      {
+        user_id: user.id,
+        deadline_type: 'inkomstenbelasting',
+        tax_year: year,
+        deadline_date: `${year}-05-01`, // May 1st for previous year's income tax
+      },
+      {
+        user_id: user.id,
+        deadline_type: 'btw_q1',
+        tax_year: year,
+        deadline_date: `${year}-04-30`, // Q1 (Jan-Mar) due April 30
+      },
+      {
+        user_id: user.id,
+        deadline_type: 'btw_q2',
+        tax_year: year,
+        deadline_date: `${year}-07-31`, // Q2 (Apr-Jun) due July 31
+      },
+      {
+        user_id: user.id,
+        deadline_type: 'btw_q3',
+        tax_year: year,
+        deadline_date: `${year}-10-31`, // Q3 (Jul-Sep) due October 31
+      },
+      {
+        user_id: user.id,
+        deadline_type: 'btw_q4',
+        tax_year: year,
+        deadline_date: `${year + 1}-01-31`, // Q4 (Oct-Dec) due January 31 next year
+      },
+    ]
+
+    const { data: createdDeadlines, error: createError } = await supabase
+      .from('tax_deadlines')
+      .insert(deadlinesToCreate)
+      .select()
+
+    if (createError) {
+      console.error('Error creating deadlines:', createError)
+      throw new Error('Kon deadlines niet aanmaken')
+    }
+
+    return createdDeadlines
+  }
+
+  return existingDeadlines
+}
+
+/**
+ * Mark a tax deadline as acknowledged
+ */
+export async function acknowledgeDeadline(deadlineId: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Je moet ingelogd zijn')
+  }
+
+  const { error } = await supabase
+    .from('tax_deadlines')
+    .update({
+      acknowledged: true,
+      acknowledged_at: new Date().toISOString(),
+    })
+    .eq('id', deadlineId)
+    .eq('user_id', user.id)
+
+  if (error) {
+    console.error('Error acknowledging deadline:', error)
+    throw new Error('Kon deadline niet markeren als afgehandeld')
+  }
+
+  revalidatePath('/dashboard/belastingen')
+}

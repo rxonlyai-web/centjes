@@ -15,12 +15,22 @@
 /* Top bar for global year selector */
 .topBar {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
   padding: 1.5rem 2rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   background-color: rgba(255, 255, 255, 0.01);
   min-height: 60px;
+}
+
+.topBarLeft {
+  flex: 1;
+}
+
+.topBarRight {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 /* Main content area (pages render here) */
