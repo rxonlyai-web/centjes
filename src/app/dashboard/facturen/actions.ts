@@ -836,7 +836,7 @@ export async function generateInvoicePDF(invoiceId: string): Promise<string> {
 
     // Render PDF to buffer
     const pdfBuffer = await renderToBuffer(
-      React.createElement(InvoicePDFTemplate, { invoice })
+      React.createElement(InvoicePDFTemplate, { invoice }) as any
     )
 
     // Convert buffer to base64 data URL
