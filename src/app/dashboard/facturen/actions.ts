@@ -5,10 +5,6 @@
  */
 
 import { createClient } from '@/utils/supabase/server'
-import { GoogleGenerativeAI } from '@google/generative-ai'
-
-// Initialize Gemini AI
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!)
 
 export interface InvoiceItem {
   description: string
@@ -270,7 +266,7 @@ function generateSmartRuleBasedResponse(
       
       // User is adding a new item
       nextStep = 'item_price'
-      ;(updatedData as any).current_item_description = userMessage.trim()
+      ;(updatedData as Record<string, unknown>).current_item_description = userMessage.trim()
       message = `Mooi! **"${userMessage}"**\n\nWat is de prijs hiervoor?\n\n_Bijvoorbeeld: "500" of "1250.50"_`
       break
 
@@ -294,14 +290,14 @@ function generateSmartRuleBasedResponse(
       }
       
       const newItem = {
-        description: (updatedData as any).current_item_description || 'Item',
+        description: (updatedData as Record<string, unknown>).current_item_description as string || 'Item',
         quantity: 1,
         unit_price: price,
         total_price: price
       }
       
       updatedData.items = [...(data.items || []), newItem]
-      delete (updatedData as any).current_item_description
+      delete (updatedData as Record<string, unknown>).current_item_description
       nextStep = 'invoice_items'
       
       const currentTotal = updatedData.items.reduce((sum, item) => sum + item.total_price, 0)
@@ -836,7 +832,8 @@ export async function generateInvoicePDF(invoiceId: string): Promise<string> {
 
     // Render PDF to buffer
     const pdfBuffer = await renderToBuffer(
-      React.createElement(InvoicePDFTemplate, { invoice }) as any
+      // @ts-expect-error - Type mismatch between InvoicePDFTemplate props and DocumentProps
+      React.createElement(InvoicePDFTemplate, { invoice })
     )
 
     // Convert buffer to base64 data URL
