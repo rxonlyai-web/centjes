@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Bell, X, FileText, Euro } from 'lucide-react'
 import { getTaxDeadlines, type TaxDeadline } from '@/app/dashboard/belastingen/actions'
 import { getPendingExpenses, type PendingExpense } from '@/app/dashboard/uitgaven/actions'
+import ExpenseReviewModal from './ExpenseReviewModal'
 import styles from './TaxNotifications.module.css'
 
 export default function TaxNotifications() {
@@ -12,6 +13,7 @@ export default function TaxNotifications() {
   const [expenses, setExpenses] = useState<PendingExpense[]>([])
   const [loading, setLoading] = useState(false)
   const [expensesLoading, setExpensesLoading] = useState(false)
+  const [selectedExpenseId, setSelectedExpenseId] = useState<string | null>(null)
 
   useEffect(() => {
     if (isOpen) {
@@ -89,15 +91,21 @@ export default function TaxNotifications() {
                     <div className={styles.loading}>Laden...</div>
                   ) : (
                     <div className={styles.expensesList}>
-                      {expenses.map((expense) => (
+                      {expenses.map((expense) => {
+                        // Truncate subject if too long
+                        const subject = expense.subject.length > 50 
+                          ? expense.subject.substring(0, 50) + '...' 
+                          : expense.subject
+
+                        return (
                         <a
                           key={expense.id}
                           href={`#expense-${expense.id}`}
                           className={styles.expenseCard}
                           onClick={(e) => {
                             e.preventDefault()
-                            // TODO: Open expense review modal
-                            console.log('Open expense:', expense.id)
+                            setSelectedExpenseId(expense.id)
+                            setIsOpen(false)
                           }}
                         >
                           <div className={styles.expenseHeader}>
@@ -110,7 +118,7 @@ export default function TaxNotifications() {
                                 : <Euro size={14} />}
                             </span>
                           </div>
-                          <p className={styles.expenseSubject}>{expense.subject}</p>
+                          <p className={styles.expenseSubject}>{subject}</p>
                           <p className={styles.expenseDate}>
                             {new Date(expense.received_at).toLocaleDateString('nl-NL', {
                               day: 'numeric',
@@ -118,7 +126,7 @@ export default function TaxNotifications() {
                             })}
                           </p>
                         </a>
-                      ))}
+                      )})}
                     </div>
                   )}
                 </div>
@@ -180,6 +188,22 @@ export default function TaxNotifications() {
             </div>
           </div>
         </>
+      )}
+
+      {/* Expense Review Modal */}
+      {selectedExpenseId && (
+        <ExpenseReviewModal
+          expenseId={selectedExpenseId}
+          onClose={() => setSelectedExpenseId(null)}
+          onApproved={() => {
+            setSelectedExpenseId(null)
+            loadExpenses() // Refresh list
+          }}
+          onRejected={() => {
+            setSelectedExpenseId(null)
+            loadExpenses() // Refresh list
+          }}
+        />
       )}
     </div>
   )
