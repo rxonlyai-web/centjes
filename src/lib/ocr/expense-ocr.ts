@@ -23,10 +23,10 @@ export interface ExpenseData {
  * Extract expense data from PDF using Gemini Vision
  */
 export async function extractExpenseData(pdfUrl: string): Promise<ExpenseData> {
-  const apiKey = process.env.GEMINI_API_KEY
+  const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
   
   if (!apiKey) {
-    throw new Error('GEMINI_API_KEY not configured')
+    throw new Error('GOOGLE_GENERATIVE_AI_API_KEY not configured')
   }
 
   // Initialize Gemini
