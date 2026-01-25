@@ -110,7 +110,7 @@ export default function TaxNotifications() {
                         >
                           <div className={styles.expenseHeader}>
                             <span className={styles.vendor}>
-                              {expense.vendor_name || expense.sender_email}
+                              {expense.vendor_name || (typeof expense.sender_email === 'string' ? expense.sender_email : 'Onbekend')}
                             </span>
                             <span className={styles.amount}>
                               {expense.total_amount 
