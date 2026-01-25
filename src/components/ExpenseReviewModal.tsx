@@ -160,11 +160,23 @@ export default function ExpenseReviewModal({
           <div className={styles.pdfSection}>
             <h3>Factuur</h3>
             <div className={styles.pdfViewer}>
-              <iframe
-                src={expense.pdf_url}
-                title="Factuur PDF"
+              <object
+                data={expense.pdf_url}
+                type="application/pdf"
                 className={styles.pdfFrame}
-              />
+              >
+                <div className={styles.pdfFallback}>
+                  <p>PDF kan niet worden weergegeven</p>
+                  <a 
+                    href={expense.pdf_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className={styles.pdfLink}
+                  >
+                    Open PDF in nieuw tabblad
+                  </a>
+                </div>
+              </object>
             </div>
             <div className={styles.pdfInfo}>
               <span>{expense.pdf_filename}</span>
@@ -194,7 +206,11 @@ export default function ExpenseReviewModal({
               <div className={styles.dataRow}>
                 <label>Van</label>
                 <div className={styles.value}>
-                  {hasOcrData && expense.vendor_name ? expense.vendor_name : expense.sender_email}
+                  {hasOcrData && expense.vendor_name 
+                    ? expense.vendor_name 
+                    : (typeof expense.sender_email === 'string' 
+                        ? expense.sender_email 
+                        : 'Onbekend')}
                 </div>
               </div>
 
