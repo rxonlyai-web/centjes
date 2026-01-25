@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
+import { createServiceRoleClient } from '@/utils/supabase/server'
 import type { 
   IncomingExpenseRequest, 
   IncomingExpenseResponse, 
@@ -55,8 +55,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 4. Create Supabase client with service role
-    const supabase = await createClient()
+    // 4. Create Supabase client with service role (bypasses RLS)
+    const supabase = createServiceRoleClient()
 
     // 5. Find user by Gmail connection
     const recipientEmail = body.recipientEmail.toLowerCase()
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     const sanitizedFileName = body.fileName.replace(/[^a-zA-Z0-9.-]/g, '_')
     const storagePath = `${userId}/${timestamp}_${sanitizedFileName}`
 
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('expense-pdfs')
       .upload(storagePath, pdfBuffer, {
         contentType: 'application/pdf',

@@ -58,7 +58,7 @@ export default function GmailIntegration() {
   }
 
   async function handleDisconnect() {
-    if (!confirm('Weet je zeker dat je je Gmail wilt ontkoppelen? Je ontvangt dan geen automatische facturen meer.')) {
+    if (!confirm('Weet je zeker dat je je Gmail wilt ontkoppelen? Je ontvangt dan geen automatische uitgaven meer.')) {
       return
     }
 
@@ -96,7 +96,7 @@ export default function GmailIntegration() {
       </div>
 
       <p className={styles.description}>
-        Koppel je Gmail account om automatisch facturen te ontvangen en te verwerken.
+        Koppel je Gmail account om automatisch inkomende uitgaven (facturen) te ontvangen en te verwerken.
       </p>
 
       {error && (
@@ -134,9 +134,9 @@ export default function GmailIntegration() {
           <div className={styles.instructions}>
             <h3>Hoe werkt het?</h3>
             <ol>
-              <li>Stuur facturen naar <strong>{connection.gmail_address}</strong></li>
-              <li>Facturen worden automatisch verwerkt</li>
-              <li>Je vindt ze terug in je dashboard</li>
+              <li>Ontvang uitgaven (facturen) op <strong>{connection.gmail_address}</strong></li>
+              <li>Uitgaven worden automatisch gedetecteerd</li>
+              <li>Je beoordeelt ze in het notificatie centrum</li>
             </ol>
           </div>
         </div>
@@ -165,8 +165,8 @@ export default function GmailIntegration() {
             <h3>Wat gebeurt er na koppelen?</h3>
             <ol>
               <li>Je Gmail adres wordt opgeslagen</li>
-              <li>De admin activeert je account (binnen 24 uur)</li>
-              <li>Daarna worden facturen automatisch verwerkt</li>
+              <li>Inkomende uitgaven (PDF facturen) worden automatisch gedetecteerd</li>
+              <li>Je ontvangt notificaties voor nieuwe uitgaven</li>
             </ol>
           </div>
         </div>
