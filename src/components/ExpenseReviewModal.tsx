@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, FileText, Check, XCircle, Loader2, AlertCircle } from 'lucide-react'
+import { X, FileText, Check, XCircle, Loader2, AlertCircle, ExternalLink } from 'lucide-react'
 import { getPendingExpense, runExpenseOCR, approveExpense, rejectExpense, type PendingExpense } from '@/app/dashboard/uitgaven/actions'
 import styles from './ExpenseReviewModal.module.css'
 
@@ -24,10 +24,28 @@ export default function ExpenseReviewModal({
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState('')
 
+  // Form state
+  const [date, setDate] = useState('')
+  const [amount, setAmount] = useState('')
+  const [description, setDescription] = useState('')
+  const [vatRate, setVatRate] = useState('21')
+  const [category, setCategory] = useState('')
+
   useEffect(() => {
     loadExpense()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expenseId])
+
+  useEffect(() => {
+    if (expense) {
+      // Pre-fill form with expense data
+      setDate(expense.invoice_date || new Date(expense.received_at).toISOString().split('T')[0])
+      setAmount(expense.total_amount?.toString() || '')
+      setDescription(expense.description || expense.subject)
+      setVatRate(expense.vat_rate?.toString() || '21')
+      setCategory(expense.category || '')
+    }
+  }, [expense])
 
   async function loadExpense() {
     try {
@@ -49,6 +67,12 @@ export default function ExpenseReviewModal({
   async function handleApprove() {
     if (!expense) return
 
+    // Validate form
+    if (!date || !amount || !description) {
+      setError('Vul alle verplichte velden in')
+      return
+    }
+
     try {
       setProcessing(true)
       setError('')
@@ -68,8 +92,23 @@ export default function ExpenseReviewModal({
         await loadExpense()
       }
 
-      // Approve expense
-      const result = await approveExpense(expenseId)
+      // Calculate amounts
+      const totalAmount = parseFloat(amount)
+      const vatRateNum = parseFloat(vatRate)
+      const subtotal = totalAmount / (1 + vatRateNum / 100)
+      const vatAmount = totalAmount - subtotal
+
+      // Approve expense with form data
+      const result = await approveExpense(expenseId, {
+        invoiceDate: date,
+        totalAmount,
+        subtotal,
+        vatRate: vatRateNum,
+        vatAmount,
+        description,
+        category: category || 'Other',
+        vendorName: expense.vendor_name || getSenderEmail()
+      })
 
       if (result.success) {
         onApproved?.()
@@ -107,6 +146,11 @@ export default function ExpenseReviewModal({
     } finally {
       setProcessing(false)
     }
+  }
+
+  function getSenderEmail(): string {
+    if (!expense) return 'Onbekend'
+    return typeof expense.sender_email === 'string' ? expense.sender_email : 'Onbekend'
   }
 
   if (loading) {
@@ -156,38 +200,7 @@ export default function ExpenseReviewModal({
 
         {/* Content */}
         <div className={styles.content}>
-          {/* PDF Viewer */}
-          <div className={styles.pdfSection}>
-            <h3>Factuur</h3>
-            <div className={styles.pdfViewer}>
-              <object
-                data={expense.pdf_url}
-                type="application/pdf"
-                className={styles.pdfFrame}
-              >
-                <div className={styles.pdfFallback}>
-                  <p>PDF kan niet worden weergegeven</p>
-                  <a 
-                    href={expense.pdf_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className={styles.pdfLink}
-                  >
-                    Open PDF in nieuw tabblad
-                  </a>
-                </div>
-              </object>
-            </div>
-            <div className={styles.pdfInfo}>
-              <span>{expense.pdf_filename}</span>
-              <span>{(expense.pdf_size_bytes / 1024).toFixed(1)} KB</span>
-            </div>
-          </div>
-
-          {/* Expense Data */}
-          <div className={styles.dataSection}>
-            <h3>Gegevens</h3>
-
+          <div className={styles.formSection}>
             {error && (
               <div className={styles.alert} data-type="error">
                 <AlertCircle size={20} />
@@ -202,91 +215,105 @@ export default function ExpenseReviewModal({
               </div>
             )}
 
-            <div className={styles.dataGrid}>
-              <div className={styles.dataRow}>
+            {!hasOcrData && !ocrRunning && (
+              <div className={styles.alert} data-type="info">
+                <AlertCircle size={16} />
+                <span>Factuurgegevens worden uitgelezen bij goedkeuren</span>
+              </div>
+            )}
+
+            {/* Form */}
+            <div className={styles.form}>
+              <div className={styles.formGroup}>
                 <label>Van</label>
-                <div className={styles.value}>
-                  {hasOcrData && expense.vendor_name 
-                    ? expense.vendor_name 
-                    : (typeof expense.sender_email === 'string' 
-                        ? expense.sender_email 
-                        : 'Onbekend')}
-                </div>
+                <input
+                  type="text"
+                  value={expense.vendor_name || getSenderEmail()}
+                  disabled
+                  className={styles.input}
+                />
               </div>
 
-              <div className={styles.dataRow}>
-                <label>Onderwerp</label>
-                <div className={styles.value}>{expense.subject}</div>
+              <div className={styles.formGroup}>
+                <label>Datum *</label>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className={styles.input}
+                  required
+                />
               </div>
 
-              <div className={styles.dataRow}>
-                <label>Ontvangen</label>
-                <div className={styles.value}>
-                  {new Date(expense.received_at).toLocaleDateString('nl-NL', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric'
-                  })}
-                </div>
+              <div className={styles.formGroup}>
+                <label>Bedrag (€) *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0.00"
+                  className={styles.input}
+                  required
+                />
               </div>
 
-              {hasOcrData && (
-                <>
-                  {expense.invoice_number && (
-                    <div className={styles.dataRow}>
-                      <label>Factuurnummer</label>
-                      <div className={styles.value}>{expense.invoice_number}</div>
-                    </div>
-                  )}
+              <div className={styles.formGroup}>
+                <label>Omschrijving *</label>
+                <input
+                  type="text"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Bijv. Lunch met klant"
+                  className={styles.input}
+                  required
+                />
+              </div>
 
-                  {expense.invoice_date && (
-                    <div className={styles.dataRow}>
-                      <label>Factuurdatum</label>
-                      <div className={styles.value}>
-                        {new Date(expense.invoice_date).toLocaleDateString('nl-NL')}
-                      </div>
-                    </div>
-                  )}
+              <div className={styles.formGroup}>
+                <label>BTW Tarief</label>
+                <select
+                  value={vatRate}
+                  onChange={(e) => setVatRate(e.target.value)}
+                  className={styles.select}
+                >
+                  <option value="0">0% (Geen BTW)</option>
+                  <option value="9">9% (Laag tarief)</option>
+                  <option value="21">21% (Hoog tarief)</option>
+                </select>
+              </div>
 
-                  <div className={styles.dataRow}>
-                    <label>Subtotaal</label>
-                    <div className={styles.value}>€{expense.subtotal?.toFixed(2) || '0.00'}</div>
-                  </div>
+              <div className={styles.formGroup}>
+                <label>Categorie</label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className={styles.select}
+                >
+                  <option value="">Selecteer een categorie</option>
+                  <option value="Office Supplies">Kantoorbenodigdheden</option>
+                  <option value="Software">Software</option>
+                  <option value="Marketing">Marketing</option>
+                  <option value="Travel">Reiskosten</option>
+                  <option value="Meals">Maaltijden</option>
+                  <option value="Utilities">Nutsvoorzieningen</option>
+                  <option value="Other">Overig</option>
+                </select>
+              </div>
 
-                  <div className={styles.dataRow}>
-                    <label>BTW ({expense.vat_rate}%)</label>
-                    <div className={styles.value}>€{expense.vat_amount?.toFixed(2) || '0.00'}</div>
-                  </div>
-
-                  <div className={styles.dataRow}>
-                    <label>Totaal</label>
-                    <div className={`${styles.value} ${styles.total}`}>
-                      €{expense.total_amount?.toFixed(2) || '0.00'}
-                    </div>
-                  </div>
-
-                  {expense.category && (
-                    <div className={styles.dataRow}>
-                      <label>Categorie</label>
-                      <div className={styles.value}>{expense.category}</div>
-                    </div>
-                  )}
-
-                  {expense.description && (
-                    <div className={styles.dataRow}>
-                      <label>Omschrijving</label>
-                      <div className={styles.value}>{expense.description}</div>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {!hasOcrData && !ocrRunning && (
-                <div className={styles.ocrNote}>
-                  <AlertCircle size={16} />
-                  <span>Factuurgegevens worden uitgelezen bij goedkeuren</span>
-                </div>
-              )}
+              {/* PDF Link */}
+              <div className={styles.pdfLink}>
+                <FileText size={16} />
+                <a 
+                  href={expense.pdf_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className={styles.link}
+                >
+                  Bekijk PDF ({expense.pdf_filename})
+                  <ExternalLink size={14} />
+                </a>
+              </div>
             </div>
           </div>
         </div>
