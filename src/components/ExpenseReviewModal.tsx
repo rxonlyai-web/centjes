@@ -53,6 +53,21 @@ export default function ExpenseReviewModal({
       const data = await getPendingExpense(expenseId)
       if (data) {
         setExpense(data)
+        
+        // Auto-run OCR if not done yet
+        if (data.ocr_status === 'pending') {
+          setOcrRunning(true)
+          const ocrResult = await runExpenseOCR(expenseId)
+          setOcrRunning(false)
+          
+          if (ocrResult.success) {
+            // Reload expense with OCR data
+            const updatedData = await getPendingExpense(expenseId)
+            if (updatedData) {
+              setExpense(updatedData)
+            }
+          }
+        }
       } else {
         setError('Uitgave niet gevonden')
       }
@@ -61,6 +76,7 @@ export default function ExpenseReviewModal({
       console.error(err)
     } finally {
       setLoading(false)
+      setOcrRunning(false)
     }
   }
 
@@ -76,21 +92,6 @@ export default function ExpenseReviewModal({
     try {
       setProcessing(true)
       setError('')
-
-      // Run OCR if not done yet
-      if (expense.ocr_status === 'pending') {
-        setOcrRunning(true)
-        const ocrResult = await runExpenseOCR(expenseId)
-        setOcrRunning(false)
-
-        if (!ocrResult.success) {
-          setError(ocrResult.error || 'OCR mislukt')
-          return
-        }
-
-        // Reload expense with OCR data
-        await loadExpense()
-      }
 
       // Calculate amounts
       const totalAmount = parseFloat(amount)
@@ -120,7 +121,6 @@ export default function ExpenseReviewModal({
       setError(err instanceof Error ? err.message : 'Er ging iets mis')
     } finally {
       setProcessing(false)
-      setOcrRunning(false)
     }
   }
 
