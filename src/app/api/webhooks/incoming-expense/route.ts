@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/utils/supabase/server'
 import type { 
-  IncomingExpenseRequest, 
   IncomingExpenseResponse, 
   WebhookErrorResponse 
 } from './types'
@@ -11,10 +10,11 @@ import type {
  * 
  * Flow:
  * 1. Validate API key
- * 2. Match user by recipient email
- * 3. Decode and upload PDF to Supabase Storage
- * 4. Create pending_expense record
- * 5. Return success with expense ID
+ * 2. Parse multipart/form-data
+ * 3. Match user by recipient email
+ * 4. Upload PDF to Supabase Storage
+ * 5. Create pending_expense record
+ * 6. Return success with expense ID
  */
 export async function POST(request: NextRequest) {
   try {
@@ -29,52 +29,74 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 2. Parse request body
-    const body = await request.json() as IncomingExpenseRequest
+    // 2. Parse FormData
+    const formData = await request.formData()
+    
+    // 3. Extract fields
+    const file = formData.get('file') as File | null
+    const senderEmail = formData.get('senderEmail') as string | null
+    const subject = formData.get('subject') as string | null
+    const receivedAt = formData.get('receivedAt') as string | null
+    const recipientEmail = formData.get('recipientEmail') as string | null
 
-    // 3. Validate required fields
-    if (!body.senderEmail || !body.subject || !body.receivedAt || !body.recipientEmail) {
+    // 4. Validate required fields
+    if (!senderEmail || !subject) {
       return NextResponse.json<WebhookErrorResponse>(
         { 
           success: false, 
           error: 'Missing required fields',
-          details: 'senderEmail, subject, receivedAt, and recipientEmail are required'
+          details: 'senderEmail and subject are required'
         },
         { status: 400 }
       )
     }
 
-    if (!body.pdfData || !body.fileName) {
+    if (!file) {
       return NextResponse.json<WebhookErrorResponse>(
         { 
           success: false, 
-          error: 'Missing PDF data',
-          details: 'pdfData and fileName are required'
+          error: 'Missing PDF file',
+          details: 'file field is required'
         },
         { status: 400 }
       )
     }
 
-    // 4. Create Supabase client with service role (bypasses RLS)
+    // 5. Convert File to Buffer
+    const arrayBuffer = await file.arrayBuffer()
+    const pdfBuffer = Buffer.from(arrayBuffer)
+
+    if (pdfBuffer.length === 0) {
+      return NextResponse.json<WebhookErrorResponse>(
+        { 
+          success: false, 
+          error: 'Empty PDF file',
+          details: 'The uploaded file is empty'
+        },
+        { status: 400 }
+      )
+    }
+
+    // 6. Create Supabase client with service role (bypasses RLS)
     const supabase = createServiceRoleClient()
 
-    // 5. Find user by Gmail connection
-    const recipientEmail = body.recipientEmail.toLowerCase()
+    // 7. Find user by Gmail connection
+    const normalizedRecipientEmail = (recipientEmail || 'rxonly.ai@gmail.com').toLowerCase()
 
     const { data: connection, error: connectionError } = await supabase
       .from('user_gmail_connections')
       .select('user_id')
-      .eq('gmail_address', recipientEmail)
+      .eq('gmail_address', normalizedRecipientEmail)
       .eq('is_active', true)
       .single()
 
     if (connectionError || !connection) {
-      console.error('No active Gmail connection found for:', recipientEmail)
+      console.error('No active Gmail connection found for:', normalizedRecipientEmail)
       return NextResponse.json<WebhookErrorResponse>(
         { 
           success: false, 
           error: 'No user found for this email address',
-          details: `No active connection for ${recipientEmail}`
+          details: `No active connection for ${normalizedRecipientEmail}`
         },
         { status: 404 }
       )
@@ -82,27 +104,9 @@ export async function POST(request: NextRequest) {
 
     const userId = connection.user_id
 
-    // 6. Decode base64 PDF
-    let pdfBuffer: Buffer
-    try {
-      // Remove data URL prefix if present
-      const base64Data = body.pdfData.replace(/^data:application\/pdf;base64,/, '')
-      pdfBuffer = Buffer.from(base64Data, 'base64')
-    } catch (error) {
-      console.error('Error decoding PDF:', error)
-      return NextResponse.json<WebhookErrorResponse>(
-        { 
-          success: false, 
-          error: 'Invalid PDF data',
-          details: 'Failed to decode base64 PDF'
-        },
-        { status: 400 }
-      )
-    }
-
-    // 7. Upload PDF to Supabase Storage
+    // 8. Upload PDF to Supabase Storage
     const timestamp = Date.now()
-    const sanitizedFileName = body.fileName.replace(/[^a-zA-Z0-9.-]/g, '_')
+    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
     const storagePath = `${userId}/${timestamp}_${sanitizedFileName}`
 
     const { error: uploadError } = await supabase.storage
@@ -124,17 +128,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 8. Get public URL for PDF
+    // 9. Get public URL for PDF
     const { data: urlData } = supabase.storage
       .from('expense-pdfs')
       .getPublicUrl(storagePath)
 
     const pdfUrl = urlData.publicUrl
 
-    // 9. Parse received date
+    // 10. Parse received date
     let receivedDate: Date
     try {
-      receivedDate = new Date(body.receivedAt)
+      receivedDate = receivedAt ? new Date(receivedAt) : new Date()
       if (isNaN(receivedDate.getTime())) {
         receivedDate = new Date()
       }
@@ -142,16 +146,16 @@ export async function POST(request: NextRequest) {
       receivedDate = new Date()
     }
 
-    // 10. Create pending_expense record
+    // 11. Create pending_expense record
     const { data: expense, error: expenseError } = await supabase
       .from('pending_expenses')
       .insert({
         user_id: userId,
-        sender_email: body.senderEmail,
-        subject: body.subject,
+        sender_email: senderEmail,
+        subject: subject,
         received_at: receivedDate.toISOString(),
         pdf_url: pdfUrl,
-        pdf_filename: body.fileName,
+        pdf_filename: file.name,
         pdf_size_bytes: pdfBuffer.length,
         status: 'pending',
         ocr_status: 'pending'
@@ -177,13 +181,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 11. Update last_sync_at for Gmail connection
+    // 12. Update last_sync_at for Gmail connection
     await supabase
       .from('user_gmail_connections')
       .update({ last_sync_at: new Date().toISOString() })
       .eq('user_id', userId)
 
-    // 12. Return success
+    // 13. Return success
     return NextResponse.json<IncomingExpenseResponse>(
       {
         success: true,
