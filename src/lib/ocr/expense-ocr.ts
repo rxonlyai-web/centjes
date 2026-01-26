@@ -181,8 +181,12 @@ Do not include any explanation, only return the JSON object.
       exchangeRate: exchangeRate ? Number(exchangeRate.toFixed(4)) : undefined,
       description: data.description || undefined,
       category: data.category || 'Other',
-      vatTreatment: data.vatTreatment || 'unknown',
-      euLocation: data.euLocation || 'UNKNOWN',
+      vatTreatment: (data.vatTreatment === 'domestic' || data.vatTreatment === 'foreign_service_reverse_charge' || data.vatTreatment === 'unknown') 
+        ? data.vatTreatment 
+        : 'unknown',
+      euLocation: (data.euLocation === 'EU' || data.euLocation === 'NON_EU' || data.euLocation === 'UNKNOWN')
+        ? data.euLocation
+        : 'UNKNOWN',
       confidence: Number(data.confidence) || 0.5
     }
   } catch (error) {
