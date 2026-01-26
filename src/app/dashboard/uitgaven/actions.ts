@@ -123,15 +123,21 @@ export async function runExpenseOCR(expenseId: string): Promise<{
         ocr_status: 'completed',
         ocr_completed_at: new Date().toISOString(),
         vendor_name: extractedData.vendorName,
+        vendor_country: extractedData.vendorCountry,
         invoice_number: extractedData.invoiceNumber,
         invoice_date: extractedData.invoiceDate,
         due_date: extractedData.dueDate,
+        currency: extractedData.currency,
         subtotal: extractedData.subtotal,
         vat_rate: extractedData.vatRate,
         vat_amount: extractedData.vatAmount,
         total_amount: extractedData.totalAmount,
+        total_amount_eur: extractedData.totalAmountEur,
+        exchange_rate: extractedData.exchangeRate,
         description: extractedData.description,
-        category: extractedData.category
+        category: extractedData.category,
+        vat_treatment: extractedData.vatTreatment,
+        eu_location: extractedData.euLocation
       })
       .eq('id', expenseId)
 

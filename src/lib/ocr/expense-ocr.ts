@@ -7,15 +7,21 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 
 export interface ExpenseData {
   vendorName: string
+  vendorCountry?: string  // 2-letter ISO code (NL, US, SG, etc.)
   invoiceNumber?: string
   invoiceDate: string  // YYYY-MM-DD
   dueDate?: string     // YYYY-MM-DD
-  subtotal: number
+  currency: string     // EUR, USD, etc.
+  subtotal: number     // In original currency
   vatRate: number
-  vatAmount: number
-  totalAmount: number
+  vatAmount: number    // In original currency
+  totalAmount: number  // In original currency
+  totalAmountEur?: number  // Converted to EUR if not EUR
+  exchangeRate?: number    // Used for conversion
   description?: string
   category?: string
+  vatTreatment: 'domestic' | 'foreign_service_reverse_charge' | 'unknown'
+  euLocation: 'EU' | 'NON_EU' | 'UNKNOWN'
   confidence: number   // 0-1
 }
 
@@ -42,39 +48,68 @@ export async function extractExpenseData(pdfUrl: string): Promise<ExpenseData> {
   const pdfBuffer = await response.arrayBuffer()
   const base64Pdf = Buffer.from(pdfBuffer).toString('base64')
 
-  // Prepare prompt
+  // Prepare prompt (matching the existing receipt OCR logic)
   const prompt = `
-You are an expert at extracting structured data from invoices.
-
-Extract the following information from this invoice PDF:
-
-1. **Vendor/Supplier Name**: The company that issued the invoice
-2. **Invoice Number**: The unique invoice identifier
-3. **Invoice Date**: When the invoice was issued (format: YYYY-MM-DD)
-4. **Due Date**: Payment deadline (format: YYYY-MM-DD)
-5. **Subtotal**: Amount excluding VAT/BTW
-6. **VAT Rate**: VAT percentage (e.g., 21 for 21%)
-7. **VAT Amount**: VAT amount in euros
-8. **Total Amount**: Total including VAT
-9. **Description**: Brief description of goods/services
-10. **Category**: Best matching category from: "Software", "Office Supplies", "Services", "Marketing", "Travel", "Utilities", "Other"
-
-Return ONLY a valid JSON object with these exact field names (camelCase):
+Extract structured transaction data from this invoice/receipt for Dutch bookkeeping.
+Return ONLY valid JSON matching this schema:
 {
-  "vendorName": "string",
-  "invoiceNumber": "string or null",
-  "invoiceDate": "YYYY-MM-DD",
-  "dueDate": "YYYY-MM-DD or null",
-  "subtotal": number,
-  "vatRate": number,
-  "vatAmount": number,
-  "totalAmount": number,
-  "description": "string or null",
-  "category": "string or null",
-  "confidence": number (0-1, your confidence in the extraction)
+  "vendorName": string,
+  "vendorCountry": string | null,  // 2-letter ISO code (NL, US, SG, GB, DE, etc.)
+  "invoiceNumber": string | null,
+  "invoiceDate": "YYYY-MM-DD" | null,
+  "dueDate": "YYYY-MM-DD" | null,
+  "currency": "EUR" | "USD" | "GBP" | null,  // Invoice currency
+  "subtotal": number | null,  // Amount excluding VAT in original currency
+  "vatRate": 0 | 9 | 21 | null,
+  "vatAmount": number | null,  // VAT amount in original currency
+  "totalAmount": number | null,  // Total including VAT in original currency
+  "description": string | null,
+  "category": "Software" | "Office Supplies" | "Services" | "Marketing" | "Travel" | "Utilities" | "Other" | null,
+  "vatTreatment": "domestic" | "foreign_service_reverse_charge" | "unknown",
+  "euLocation": "EU" | "NON_EU" | "UNKNOWN",
+  "confidence": number  // 0-1
 }
 
-If a field cannot be found, use null for strings or 0 for numbers.
+CRITICAL RULES for vatTreatment (READ CAREFULLY):
+
+1. "foreign_service_reverse_charge" if ANY of these conditions are met:
+   - Invoice explicitly mentions "reverse charge", "reverse VAT", "customer to account for VAT", or similar
+   - Supplier address is outside Netherlands (check city, postal code, country)
+   - Supplier is a SaaS/software/online service company (like Railway, Supabase, Vercel, AWS, Stripe, etc.)
+   - No Dutch VAT (BTW) shown on invoice AND supplier appears foreign
+   - Invoice shows GST, Sales Tax, or other non-EU tax instead of VAT
+   When this applies: Set vatRate=21, vatAmount=0
+
+2. "domestic" ONLY if:
+   - Supplier has NL VAT number (starts with NL) OR
+   - Invoice clearly shows Dutch BTW breakdown OR
+   - Supplier address is clearly in Netherlands with Dutch postal code
+
+3. "unknown" if genuinely uncertain
+
+CRITICAL RULES for euLocation (for Dutch VAT reporting):
+
+1. "NON_EU" if supplier is from:
+   - Singapore (SG), United States (US), United Kingdom (UK), Switzerland (CH), Norway (NO), Canada (CA), Australia (AU), etc.
+   - ANY country outside the European Union
+   - Check the supplier's full address carefully - city and country are key indicators
+
+2. "EU" if supplier is from EU countries:
+   - Belgium (BE), Germany (DE), France (FR), Italy (IT), Spain (ES), Austria (AT), Denmark (DK), Sweden (SE), etc.
+   - Must be an EU member state (UK is NOT EU since Brexit)
+
+3. "UNKNOWN" only if you cannot determine the country from the invoice
+
+For vendorCountry: Extract 2-letter ISO code (NL, SG, US, GB, DE, etc.)
+Look at the full supplier address - the city and postal code format are strong indicators.
+
+For currency: Extract the currency code from the invoice (EUR, USD, GBP, etc.)
+If not explicitly shown, infer from supplier country (US = USD, UK = GBP, EU = EUR, etc.)
+
+For amounts: Always use the amounts in the ORIGINAL CURRENCY shown on the invoice.
+Do not convert - we will handle conversion separately.
+
+If a field cannot be found, use null.
 For dates, always use YYYY-MM-DD format.
 For amounts, use decimal numbers (e.g., 121.50).
 
@@ -102,20 +137,52 @@ Do not include any explanation, only return the JSON object.
       .replace(/```\n?/g, '')
       .trim()
 
-    const data = JSON.parse(jsonText) as ExpenseData
+    const data = JSON.parse(jsonText) as {
+      vendorName?: string
+      vendorCountry?: string
+      invoiceNumber?: string
+      invoiceDate?: string
+      dueDate?: string
+      currency?: string
+      subtotal?: number
+      vatRate?: number
+      vatAmount?: number
+      totalAmount?: number
+      description?: string
+      category?: string
+      vatTreatment?: string
+      euLocation?: string
+      confidence?: number
+    }
+
+    // Convert to EUR if needed
+    let totalAmountEur = data.totalAmount
+    let exchangeRate: number | undefined
+
+    if (data.currency && data.currency !== 'EUR' && data.totalAmount) {
+      // Get exchange rate (you can replace this with a real API call)
+      exchangeRate = await getExchangeRate(data.currency, 'EUR')
+      totalAmountEur = data.totalAmount * exchangeRate
+    }
 
     // Validate and sanitize
     return {
       vendorName: data.vendorName || 'Unknown Vendor',
+      vendorCountry: data.vendorCountry || undefined,
       invoiceNumber: data.invoiceNumber || undefined,
       invoiceDate: data.invoiceDate || new Date().toISOString().split('T')[0],
       dueDate: data.dueDate || undefined,
+      currency: data.currency || 'EUR',
       subtotal: Number(data.subtotal) || 0,
       vatRate: Number(data.vatRate) || 21,
       vatAmount: Number(data.vatAmount) || 0,
       totalAmount: Number(data.totalAmount) || 0,
+      totalAmountEur: totalAmountEur ? Number(totalAmountEur.toFixed(2)) : undefined,
+      exchangeRate: exchangeRate ? Number(exchangeRate.toFixed(4)) : undefined,
       description: data.description || undefined,
       category: data.category || 'Other',
+      vatTreatment: data.vatTreatment || 'unknown',
+      euLocation: data.euLocation || 'UNKNOWN',
       confidence: Number(data.confidence) || 0.5
     }
   } catch (error) {
@@ -123,6 +190,39 @@ Do not include any explanation, only return the JSON object.
     console.error('Response text:', responseText)
     throw new Error('Failed to extract expense data from PDF')
   }
+}
+
+/**
+ * Get exchange rate from currency to EUR
+ * 
+ * For MVP, uses hardcoded rates. In production, use a real API like:
+ * - https://exchangerate-api.com
+ * - https://fixer.io
+ * - European Central Bank API
+ */
+async function getExchangeRate(fromCurrency: string, toCurrency: string): Promise<number> {
+  // Hardcoded rates for common currencies (as of Jan 2026)
+  // In production, fetch from API
+  const rates: Record<string, number> = {
+    'USD': 0.92,  // 1 USD = 0.92 EUR
+    'GBP': 1.17,  // 1 GBP = 1.17 EUR
+    'CHF': 1.05,  // 1 CHF = 1.05 EUR
+    'SGD': 0.68,  // 1 SGD = 0.68 EUR
+    'CAD': 0.65,  // 1 CAD = 0.65 EUR
+    'AUD': 0.58,  // 1 AUD = 0.58 EUR
+  }
+
+  if (fromCurrency === toCurrency) {
+    return 1
+  }
+
+  const rate = rates[fromCurrency]
+  if (!rate) {
+    console.warn(`No exchange rate found for ${fromCurrency}, using 1:1`)
+    return 1
+  }
+
+  return rate
 }
 
 /**
@@ -146,20 +246,23 @@ export function validateExpenseData(data: ExpenseData): {
     errors.push('Total amount must be greater than 0')
   }
 
-  // Check VAT calculation
-  const expectedVatAmount = (data.subtotal * data.vatRate) / 100
-  const vatDifference = Math.abs(data.vatAmount - expectedVatAmount)
-  
-  if (vatDifference > 0.02) {
-    errors.push('VAT calculation does not match (subtotal × VAT rate)')
-  }
+  // Skip VAT validation for reverse charge
+  if (data.vatTreatment !== 'foreign_service_reverse_charge') {
+    // Check VAT calculation
+    const expectedVatAmount = (data.subtotal * data.vatRate) / 100
+    const vatDifference = Math.abs(data.vatAmount - expectedVatAmount)
+    
+    if (vatDifference > 0.02) {
+      errors.push('VAT calculation does not match (subtotal × VAT rate)')
+    }
 
-  // Check total calculation
-  const expectedTotal = data.subtotal + data.vatAmount
-  const totalDifference = Math.abs(data.totalAmount - expectedTotal)
-  
-  if (totalDifference > 0.02) {
-    errors.push('Total does not match (subtotal + VAT)')
+    // Check total calculation
+    const expectedTotal = data.subtotal + data.vatAmount
+    const totalDifference = Math.abs(data.totalAmount - expectedTotal)
+    
+    if (totalDifference > 0.02) {
+      errors.push('Total does not match (subtotal + VAT)')
+    }
   }
 
   return {
