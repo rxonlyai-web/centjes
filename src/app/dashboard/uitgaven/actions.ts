@@ -14,15 +14,21 @@ export interface PendingExpense {
   ocr_status: string
   ocr_completed_at: string | null
   vendor_name: string | null
+  vendor_country: string | null
   invoice_number: string | null
   invoice_date: string | null
   due_date: string | null
+  currency: string | null
   subtotal: number | null
   vat_rate: number | null
   vat_amount: number | null
   total_amount: number | null
+  total_amount_eur: number | null
+  exchange_rate: number | null
   description: string | null
   category: string | null
+  vat_treatment: string | null
+  eu_location: string | null
   status: string
   created_at: string
 }

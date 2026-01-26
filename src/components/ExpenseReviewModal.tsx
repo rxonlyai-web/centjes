@@ -245,8 +245,16 @@ export default function ExpenseReviewModal({
                 />
               </div>
 
+
               <div className={styles.formGroup}>
-                <label>Bedrag (€) *</label>
+                <label>
+                  Bedrag ({expense?.currency || '€'}) *
+                  {expense?.currency && expense.currency !== 'EUR' && expense.total_amount_eur && (
+                    <span style={{ fontSize: '0.85em', color: '#666', marginLeft: '8px' }}>
+                      ≈ €{expense.total_amount_eur.toFixed(2)}
+                    </span>
+                  )}
+                </label>
                 <input
                   type="number"
                   step="0.01"
@@ -256,7 +264,13 @@ export default function ExpenseReviewModal({
                   className={styles.input}
                   required
                 />
+                {expense?.currency && expense.currency !== 'EUR' && expense.exchange_rate && (
+                  <small style={{ color: '#666', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+                    Wisselkoers: 1 {expense.currency} = €{expense.exchange_rate.toFixed(4)}
+                  </small>
+                )}
               </div>
+
 
               <div className={styles.formGroup}>
                 <label>Omschrijving *</label>
