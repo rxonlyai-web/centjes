@@ -205,21 +205,30 @@ export async function approveExpense(
       vat_amount: overrides?.vatAmount || expense.vat_amount || 0,
       total_amount: overrides?.totalAmount || expense.total_amount || 0,
       description: overrides?.description || expense.description || expense.subject,
-      category: overrides?.category || expense.category || 'Other'
+      category: overrides?.category || expense.category || 'Overig',
+      vat_treatment: expense.vat_treatment || 'domestic',
+      eu_location: expense.eu_location || null
     }
 
-    // Create transaction
+    // Use EUR amount if available, otherwise use original amount
+    const amountToUse = expense.currency !== 'EUR' && expense.total_amount_eur 
+      ? expense.total_amount_eur 
+      : finalData.total_amount
+
+    // Create transaction using correct schema
     const { data: transaction, error: transactionError } = await supabase
       .from('transacties')
       .insert({
-        user_id: user.id,
-        type: 'expense',
-        description: finalData.description,
-        amount: finalData.total_amount,
-        vat_rate: finalData.vat_rate,
-        date: finalData.invoice_date,
-        category: finalData.category,
-        vendor: finalData.vendor_name
+        gebruiker_id: user.id,
+        datum: new Date(finalData.invoice_date).toISOString(),
+        bedrag: amountToUse,
+        omschrijving: `${finalData.vendor_name} - ${finalData.description}`,
+        categorie: finalData.category,
+        btw_tarief: finalData.vat_rate,
+        vat_treatment: finalData.vat_treatment,
+        eu_location: finalData.vat_treatment === 'foreign_service_reverse_charge' ? finalData.eu_location : null,
+        type_transactie: 'UITGAVEN',
+        bon_url: expense.pdf_url
       })
       .select('id')
       .single()
