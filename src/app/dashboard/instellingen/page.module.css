@@ -100,6 +100,7 @@
 .cancelButton:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
 
 /* Loading and Error States */
 .loading,
@@ -145,29 +146,30 @@
   margin: 0;
 }
 
-.whatsappIconButton {
+.whatsappButton {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  padding: 0;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
   background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
   color: white;
   border: none;
   border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s;
   box-shadow: 0 2px 6px rgba(37, 211, 102, 0.25);
+  white-space: nowrap;
 }
 
-.whatsappIconButton:hover {
+.whatsappButton:hover {
   background: linear-gradient(135deg, #2BE47A 0%, #14A38B 100%);
   transform: translateY(-1px);
   box-shadow: 0 4px 10px rgba(37, 211, 102, 0.35);
 }
 
-.whatsappIconButton:active {
+.whatsappButton:active {
   transform: translateY(0);
 }
 

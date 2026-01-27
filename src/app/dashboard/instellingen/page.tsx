@@ -228,11 +228,11 @@ export default function InstellingenPage() {
             <h2 className={styles.sectionTitle}>Bedrijfsgegevens</h2>
             <button 
               onClick={handleWhatsAppShare} 
-              className={styles.whatsappIconButton}
+              className={styles.whatsappButton}
               type="button"
-              title="Deel factuurgegevens via WhatsApp"
             >
-              <MessageCircle size={18} />
+              <MessageCircle size={20} />
+              Deel via WhatsApp
             </button>
           </div>
           <div className={styles.formGrid}>
