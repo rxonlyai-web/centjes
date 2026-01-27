@@ -11,7 +11,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Check, Edit2, Save, X } from 'lucide-react'
+import { Check, Edit2, Save, X, MessageCircle } from 'lucide-react'
 import { getCompanySettings, updateCompanySettings, type CompanySettingsInput } from './actions'
 import GmailIntegration from '@/components/GmailIntegration'
 import styles from './page.module.css'
@@ -133,6 +133,43 @@ export default function InstellingenPage() {
     }
   }
 
+  function handleWhatsAppShare() {
+    // Format invoice details
+    const lines = [
+      `📄 *Factuurgegevens ${settings.company_name}*`,
+      '',
+      settings.company_name,
+    ]
+
+    if (settings.kvk_number) lines.push(`KVK: ${settings.kvk_number}`)
+    if (settings.btw_number) lines.push(`BTW: ${settings.btw_number}`)
+    
+    lines.push('')
+    
+    if (settings.address_line1) lines.push(settings.address_line1)
+    if (settings.address_line2) lines.push(settings.address_line2)
+    if (settings.postal_code || settings.city) {
+      lines.push(`${settings.postal_code} ${settings.city}`.trim())
+    }
+    if (settings.country && settings.country !== 'Nederland') lines.push(settings.country)
+    
+    lines.push('')
+    
+    if (settings.email) lines.push(`📧 ${settings.email}`)
+    if (settings.phone) lines.push(`📞 ${settings.phone}`)
+    if (settings.bank_account) lines.push(`💳 ${settings.bank_account}`)
+    
+    lines.push('')
+    lines.push('---')
+    lines.push('💡 Ook zo je factuurgegevens snel verzenden vanuit je boekhoudsysteem? Gebruik dan gratis Centjes - het boekhoudsysteem voor eenmanszaken')
+    lines.push('👉 https://centjes.eu')
+
+    const message = lines.join('\n')
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
+    
+    window.open(whatsappUrl, '_blank')
+  }
+
   if (loading) {
     return (
       <div className={styles.container}>
@@ -186,9 +223,18 @@ export default function InstellingenPage() {
       )}
 
       <form className={styles.form}>
-        {/* Basic Company Info */}
         <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Bedrijfsgegevens</h2>
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionTitle}>Bedrijfsgegevens</h2>
+            <button 
+              onClick={handleWhatsAppShare} 
+              className={styles.whatsappIconButton}
+              type="button"
+              title="Deel factuurgegevens via WhatsApp"
+            >
+              <MessageCircle size={18} />
+            </button>
+          </div>
           <div className={styles.formGrid}>
             <div className={styles.formGroup}>
               <label htmlFor="company_name" className={styles.label}>

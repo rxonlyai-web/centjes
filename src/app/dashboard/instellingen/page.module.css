@@ -100,7 +100,6 @@
 .cancelButton:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}
 
 /* Loading and Error States */
 .loading,
@@ -130,13 +129,46 @@
   margin-bottom: 0;
 }
 
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 .sectionTitle {
   font-size: 1.125rem;
   font-weight: 600;
   color: white;
-  margin: 0 0 1rem 0;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 0;
+}
+
+.whatsappIconButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 6px rgba(37, 211, 102, 0.25);
+}
+
+.whatsappIconButton:hover {
+  background: linear-gradient(135deg, #2BE47A 0%, #14A38B 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(37, 211, 102, 0.35);
+}
+
+.whatsappIconButton:active {
+  transform: translateY(0);
 }
 
 .formGrid {
@@ -222,37 +254,6 @@
   border: none;
 }
 
-.cancelButton {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.cancelButton:hover {
-  background-color: rgba(255, 255, 255, 0.15);
-}
-
-.saveButton {
-  background: linear-gradient(135deg, #0071e3 0%, #005bb5 100%);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.saveButton:hover:not(:disabled) {
-  background: linear-gradient(135deg, #0077ed 0%, #0066cc 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
-}
-
-.saveButton:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.saveButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 /* Success Message */
 .successMessage {
   padding: 1rem 1.5rem;
@@ -291,5 +292,10 @@
 
   .button {
     width: 100%;
+  }
+  
+  .whatsappButton {
+    width: 100%;
+    justify-content: center;
   }
 }
