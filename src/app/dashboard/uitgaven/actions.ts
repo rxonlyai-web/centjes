@@ -196,6 +196,9 @@ export async function approveExpense(
   }
 
   try {
+    console.log('[approveExpense] Starting approval for expense:', expenseId)
+    console.log('[approveExpense] Expense data:', expense)
+    
     // Merge expense data with overrides
     const finalData = {
       vendor_name: overrides?.vendorName || expense.vendor_name || 'Unknown',
@@ -210,32 +213,44 @@ export async function approveExpense(
       eu_location: expense.eu_location || null
     }
 
+    console.log('[approveExpense] Final data:', finalData)
+
     // Use EUR amount if available, otherwise use original amount
     const amountToUse = expense.currency !== 'EUR' && expense.total_amount_eur 
       ? expense.total_amount_eur 
       : finalData.total_amount
 
+    console.log('[approveExpense] Amount to use:', amountToUse, 'Currency:', expense.currency)
+
     // Create transaction using correct schema
+    const transactionData = {
+      gebruiker_id: user.id,
+      datum: new Date(finalData.invoice_date).toISOString(),
+      bedrag: amountToUse,
+      omschrijving: `${finalData.vendor_name} - ${finalData.description}`,
+      categorie: finalData.category,
+      btw_tarief: finalData.vat_rate,
+      vat_treatment: finalData.vat_treatment,
+      eu_location: finalData.vat_treatment === 'foreign_service_reverse_charge' ? finalData.eu_location : null,
+      type_transactie: 'UITGAVEN',
+      bon_url: expense.pdf_url
+    }
+
+    console.log('[approveExpense] Transaction data to insert:', transactionData)
+
     const { data: transaction, error: transactionError } = await supabase
       .from('transacties')
-      .insert({
-        gebruiker_id: user.id,
-        datum: new Date(finalData.invoice_date).toISOString(),
-        bedrag: amountToUse,
-        omschrijving: `${finalData.vendor_name} - ${finalData.description}`,
-        categorie: finalData.category,
-        btw_tarief: finalData.vat_rate,
-        vat_treatment: finalData.vat_treatment,
-        eu_location: finalData.vat_treatment === 'foreign_service_reverse_charge' ? finalData.eu_location : null,
-        type_transactie: 'UITGAVEN',
-        bon_url: expense.pdf_url
-      })
+      .insert(transactionData)
       .select('id')
       .single()
 
     if (transactionError) {
+      console.error('[approveExpense] Transaction insert error:', transactionError)
+      console.error('[approveExpense] Error details:', JSON.stringify(transactionError, null, 2))
       throw transactionError
     }
+
+    console.log('[approveExpense] Transaction created:', transaction)
 
     // Update expense status
     const { error: updateError } = await supabase
@@ -248,12 +263,16 @@ export async function approveExpense(
       .eq('id', expenseId)
 
     if (updateError) {
+      console.error('[approveExpense] Update expense error:', updateError)
       throw updateError
     }
 
+    console.log('[approveExpense] Success! Transaction ID:', transaction.id)
     return { success: true, transactionId: transaction.id }
   } catch (error) {
-    console.error('Error approving expense:', error)
+    console.error('[approveExpense] CATCH ERROR:', error)
+    console.error('[approveExpense] Error type:', typeof error)
+    console.error('[approveExpense] Error details:', JSON.stringify(error, null, 2))
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to approve expense'
