@@ -107,17 +107,21 @@ export default function ExpenseReviewModal({
         vatRate: vatRateNum,
         vatAmount,
         description,
-        category: category || 'Other',
+        category: category || 'Overig',
         vendorName: expense.vendor_name || getSenderEmail()
       })
+
+      console.log('[ExpenseReviewModal] Approve result:', result)
 
       if (result.success) {
         onApproved?.()
         onClose()
       } else {
+        console.error('[ExpenseReviewModal] Approve failed:', result.error)
         setError(result.error || 'Goedkeuren mislukt')
       }
     } catch (err) {
+      console.error('[ExpenseReviewModal] Approve exception:', err)
       setError(err instanceof Error ? err.message : 'Er ging iets mis')
     } finally {
       setProcessing(false)
