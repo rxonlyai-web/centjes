@@ -223,7 +223,8 @@ export async function approveExpense(
     console.log('[approveExpense] Amount to use:', amountToUse, 'Currency:', expense.currency)
 
     // Create transaction using correct schema
-    const transactionData = {
+    // For eu_location: only include if reverse charge, otherwise let DB default handle it
+    const transactionData: any = {
       gebruiker_id: user.id,
       datum: new Date(finalData.invoice_date).toISOString(),
       bedrag: amountToUse,
@@ -231,9 +232,13 @@ export async function approveExpense(
       categorie: finalData.category,
       btw_tarief: finalData.vat_rate,
       vat_treatment: finalData.vat_treatment,
-      eu_location: finalData.vat_treatment === 'foreign_service_reverse_charge' ? finalData.eu_location : null,
       type_transactie: 'UITGAVEN',
       bon_url: expense.pdf_url
+    }
+
+    // Only add eu_location if reverse charge
+    if (finalData.vat_treatment === 'foreign_service_reverse_charge') {
+      transactionData.eu_location = finalData.eu_location || 'UNKNOWN'
     }
 
     console.log('[approveExpense] Transaction data to insert:', transactionData)
