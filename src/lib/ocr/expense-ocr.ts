@@ -55,7 +55,7 @@ function getMimeType(url: string): string {
 export async function extractExpenseData(fileUrl: string): Promise<ExpenseData> {
   // Initialize Gemini
   const genAI = getGeminiClient()
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
 
   // Download file
   const response = await fetch(fileUrl)
