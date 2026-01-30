@@ -20,7 +20,7 @@
   bottom: 0;
   width: 100%;
   max-width: 500px;
-  background-color: #111827; /* Navy background */
+  background-color: var(--surface-elevated);
   box-shadow: -4px 0 15px rgba(0, 0, 0, 0.3);
   z-index: 51;
   transform: translateX(100%);

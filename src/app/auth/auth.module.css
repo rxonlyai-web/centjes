@@ -221,8 +221,8 @@
 
 .error {
   padding: 12px 16px;
-  background-color: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background-color: rgba(255, 59, 48, 0.1);
+  border: 1px solid rgba(255, 59, 48, 0.3);
   border-radius: var(--radius);
   color: #dc2626;
   font-size: 14px;

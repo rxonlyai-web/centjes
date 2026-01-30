@@ -3,6 +3,10 @@
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+  /* Mobile navigation */
+  --bottom-nav-height: 60px;
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* Light mode (fallback - not used by default) */
@@ -20,6 +24,17 @@
   --accent-hover: #0077ed;
   --error: #ff3b30;
   --success: #34c759;
+
+  /* Semantic tokens */
+  --primary-color: #0071e3;
+  --text-primary: #1d1d1f;
+  --text-secondary: #6b7280;
+  --card-bg: #ffffff;
+  --border-color: #d1d5db;
+  --input-bg: #f9fafb;
+  --bg-secondary: #f3f4f6;
+  --bg-subtle: #f9fafb;
+  --surface-elevated: #ffffff;
 }
 
 /* Dark mode (default) */
@@ -33,11 +48,22 @@
   --gray-500: #86868b;
   --gray-600: #98989d;
   --gray-700: #aeaeb2;
-  --accent: #2997ff;
-  --accent-hover: #0a84ff;
-  --error: #ff453a;
-  --success: #32d74b;
+  --accent: #0071e3;
+  --accent-hover: #0077ed;
+  --error: #ff3b30;
+  --success: #34c759;
   color-scheme: dark;
+
+  /* Semantic tokens */
+  --primary-color: #0071e3;
+  --text-primary: #f5f5f7;
+  --text-secondary: rgba(255, 255, 255, 0.6);
+  --card-bg: rgba(255, 255, 255, 0.05);
+  --border-color: rgba(255, 255, 255, 0.1);
+  --input-bg: rgba(255, 255, 255, 0.05);
+  --bg-secondary: rgba(255, 255, 255, 0.03);
+  --bg-subtle: rgba(255, 255, 255, 0.03);
+  --surface-elevated: #1a1d24;
 }
 
 html,

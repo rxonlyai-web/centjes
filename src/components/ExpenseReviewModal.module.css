@@ -26,7 +26,7 @@
 
 /* Modal */
 .modal {
-  background: #1a1d24;
+  background: var(--surface-elevated);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 16px;
   width: 100%;
@@ -114,14 +114,14 @@
 }
 
 .alert[data-type="error"] {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #f87171;
+  background: rgba(255, 59, 48, 0.1);
+  border: 1px solid rgba(255, 59, 48, 0.3);
+  color: #ff3b30;
 }
 
 .alert[data-type="info"] {
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  background: rgba(0, 113, 227, 0.1);
+  border: 1px solid rgba(0, 113, 227, 0.3);
   color: #60a5fa;
 }
 
@@ -158,7 +158,7 @@
 .input:focus,
 .select:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #0071e3;
   background: rgba(255, 255, 255, 0.08);
 }
 
@@ -176,7 +176,7 @@
 }
 
 .select option {
-  background: #1a1d24;
+  background: var(--surface-elevated);
   color: white;
 }
 
@@ -194,7 +194,7 @@
 }
 
 .link {
-  color: #667eea;
+  color: #0071e3;
   text-decoration: none;
   font-weight: 600;
   display: flex;
@@ -204,7 +204,7 @@
 }
 
 .link:hover {
-  color: #7c8aed;
+  color: #0077ed;
   text-decoration: underline;
 }
 
@@ -234,26 +234,26 @@
 }
 
 .buttonReject {
-  background: rgba(239, 68, 68, 0.1);
-  color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(255, 59, 48, 0.1);
+  color: #ff3b30;
+  border: 1px solid rgba(255, 59, 48, 0.3);
 }
 
 .buttonReject:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.2);
-  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(255, 59, 48, 0.2);
+  border-color: rgba(255, 59, 48, 0.5);
   transform: translateY(-1px);
 }
 
 .buttonApprove {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0071e3 0%, #005bb5 100%);
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .buttonApprove:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 8px 20px rgba(0, 113, 227, 0.4);
 }
 
 .buttonReject:disabled,
@@ -292,7 +292,7 @@
 }
 
 .error {
-  color: #f87171;
+  color: #ff3b30;
 }
 
 .spinner {

@@ -6,8 +6,7 @@
 
 @media (max-width: 768px) {
   .container {
-    padding: 2rem 1rem;
-    padding-top: 5rem; /* Space for hamburger */
+    padding: 1.5rem 1rem;
   }
 }
 
@@ -21,8 +20,8 @@
 
 @media (max-width: 768px) {
   .header {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    align-items: center;
     margin-bottom: 2rem;
   }
 }
@@ -63,8 +62,8 @@
 
 @media (max-width: 768px) {
   .button {
-    width: 100%;
-    padding: 12px 20px;
+    padding: 8px 16px;
+    font-size: 13px;
   }
 }
 

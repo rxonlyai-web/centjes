@@ -1,0 +1,74 @@
+.bottomNav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: calc(var(--bottom-nav-height, 60px) + var(--safe-area-bottom, 0px));
+  padding-bottom: var(--safe-area-bottom, 0px);
+  background-color: #0B1120;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 900;
+  justify-content: space-around;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .bottomNav {
+    display: flex;
+  }
+}
+
+.navItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-decoration: none;
+  transition: color 0.2s;
+  min-width: 64px;
+}
+
+.navItem:hover {
+  color: rgba(255, 255, 255, 0.8);
+  opacity: 1;
+}
+
+.navItem.active {
+  color: #0071e3;
+}
+
+.label {
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+/* Center camera button - larger and raised */
+.cameraButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  background-color: #0071e3;
+  border: none;
+  border-radius: 50%;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: -20px;
+  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.4);
+}
+
+.cameraButton:hover {
+  background-color: #0077ed;
+  transform: scale(1.05);
+}
+
+.cameraButton:active {
+  transform: scale(0.95);
+}

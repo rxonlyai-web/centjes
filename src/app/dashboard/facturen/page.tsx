@@ -216,7 +216,7 @@ function FacturenPageContent() {
         </div>
       )}
 
-      {/* Table */}
+      {/* Table (desktop) */}
       {!loading && invoices.length > 0 && (
         <div className={styles.tableWrapper}>
           <table className={styles.table}>
@@ -284,6 +284,43 @@ function FacturenPageContent() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Card list (mobile) */}
+      {!loading && invoices.length > 0 && (
+        <div className={styles.cardList}>
+          {invoices.map((invoice) => (
+            <div
+              key={invoice.id}
+              className={styles.card}
+              onClick={() => router.push(`/dashboard/facturen/${invoice.id}`)}
+            >
+              <div className={styles.cardTop}>
+                <div className={styles.cardClient}>
+                  <span className={styles.cardClientName}>{invoice.client_name}</span>
+                  <span className={styles.cardInvoiceNumber}>{invoice.invoice_number}</span>
+                </div>
+                <span className={styles.cardAmount}>{formatAmount(invoice.total_amount)}</span>
+              </div>
+              <div className={styles.cardBottom}>
+                <span className={styles.cardDate}>{formatDate(invoice.invoice_date)}</span>
+                <select
+                  value={invoice.status}
+                  onChange={(e) => {
+                    e.stopPropagation()
+                    handleStatusChange(invoice.id, e.target.value as any)
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className={`${styles.statusBadge} ${getStatusBadgeClass(invoice.status)}`}
+                >
+                  <option value="draft">Concept</option>
+                  <option value="sent">Verzonden</option>
+                  <option value="paid">Betaald</option>
+                </select>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

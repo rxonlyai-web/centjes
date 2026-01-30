@@ -18,7 +18,7 @@
 }
 
 .title {
-  font-size: 2.5rem;
+  font-size: 2rem;
   font-weight: 700;
   color: #f5f5f7;
   margin: 0 0 0.5rem 0;
@@ -34,12 +34,12 @@
   background-color: #0071e3;
   color: white;
   border: none;
-  padding: 12px 24px;
-  border-radius: 12px;
-  font-size: 1rem;
-  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, transform 0.1s;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -283,22 +283,22 @@
 
 @media (max-width: 768px) {
   .container {
-    padding: 2rem 1rem;
+    padding: 1.5rem 1rem;
   }
 
   .headerContent {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    align-items: center;
     gap: 1rem;
   }
 
   .primaryButton {
-    width: 100%;
-    padding: 14px 24px;
+    padding: 8px 16px;
+    font-size: 13px;
   }
 
   .title {
-    font-size: 2rem;
+    font-size: 1.5rem;
   }
 
   .kpiGrid {

@@ -20,7 +20,7 @@ const styles = StyleSheet.create({
   },
   invoiceNumber: {
     fontSize: 12,
-    color: '#667eea',
+    color: '#0071e3',
     marginTop: 5,
   },
   parties: {

@@ -2,21 +2,26 @@
 
 /**
  * Dashboard Layout Client
- * 
+ *
  * Wraps all dashboard pages with:
  * - YearProvider: Global year context for year-based filtering
- * - Sidebar: Main navigation
+ * - Sidebar: Main navigation (desktop)
+ * - BottomNavigation: Mobile navigation
  * - Top bar: Contains global year selector
  */
 
-import { ReactNode } from 'react'
+import { ReactNode, useState } from 'react'
 import Sidebar from '@/components/Sidebar'
+import BottomNavigation from '@/components/BottomNavigation'
+import CameraCapture from '@/components/CameraCapture'
 import YearSelector from '@/components/YearSelector'
 import TaxNotifications from '@/components/TaxNotifications'
 import { YearProvider } from '@/contexts/YearContext'
 import styles from './DashboardLayoutClient.module.css'
 
 export default function DashboardLayoutClient({ children }: { children: ReactNode }) {
+  const [showCamera, setShowCamera] = useState(false)
+
   return (
     <YearProvider>
       <div className={styles.wrapper}>
@@ -33,6 +38,8 @@ export default function DashboardLayoutClient({ children }: { children: ReactNod
             {children}
           </div>
         </div>
+        <BottomNavigation onCameraClick={() => setShowCamera(true)} />
+        {showCamera && <CameraCapture onClose={() => setShowCamera(false)} />}
       </div>
     </YearProvider>
   )

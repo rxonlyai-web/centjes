@@ -18,16 +18,16 @@
 }
 
 .bellButton:hover {
-  background: rgba(102, 126, 234, 0.1);
-  border-color: #667eea;
-  color: #667eea;
+  background: rgba(0, 113, 227, 0.1);
+  border-color: #0071e3;
+  color: #0071e3;
 }
 
 .badge {
   position: absolute;
   top: -4px;
   right: -4px;
-  background: #ef4444;
+  background: #ff3b30;
   color: white;
   font-size: 0.7rem;
   font-weight: 600;
@@ -53,7 +53,7 @@
   right: 0;
   width: 420px;
   max-height: 600px;
-  background: #1a1d24;
+  background: var(--surface-elevated);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 12px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
@@ -129,7 +129,7 @@
 
 .deadline:hover {
   background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(102, 126, 234, 0.4);
+  border-color: rgba(0, 113, 227, 0.4);
   transform: translateY(-1px);
 }
 
@@ -157,7 +157,7 @@
   font-size: 0.8rem;
   font-weight: 600;
   color: white;
-  background: #ef4444;
+  background: #ff3b30;
   padding: 0.35rem 0.75rem;
   border-radius: 6px;
   white-space: nowrap;
@@ -167,7 +167,7 @@
   font-size: 0.8rem;
   font-weight: 600;
   color: white;
-  background: #3b82f6;
+  background: #0071e3;
   padding: 0.35rem 0.75rem;
   border-radius: 6px;
   white-space: nowrap;
@@ -189,7 +189,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  color: #667eea;
+  color: #0071e3;
   text-decoration: none;
   font-size: 0.9rem;
   font-weight: 500;
@@ -197,7 +197,7 @@
 }
 
 .link:hover {
-  color: #7c8ff0;
+  color: #0077ed;
   transform: translateX(2px);
 }
 
@@ -247,7 +247,7 @@
 
 .expenseCard:hover {
   background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(102, 126, 234, 0.4);
+  border-color: rgba(0, 113, 227, 0.4);
   transform: translateY(-1px);
 }
 
@@ -271,7 +271,7 @@
 .amount {
   font-size: 0.95rem;
   font-weight: 700;
-  color: #22c55e;
+  color: #34c759;
   white-space: nowrap;
   display: flex;
   align-items: center;
@@ -294,9 +294,19 @@
 }
 
 /* Responsive */
-@media (max-width: 480px) {
+@media (max-width: 768px) {
   .dropdown {
-    width: calc(100vw - 2rem);
-    right: 1rem;
+    position: fixed;
+    top: auto;
+    bottom: calc(var(--bottom-nav-height, 60px) + var(--safe-area-bottom, 0px) + 0.5rem);
+    left: 0.5rem;
+    right: 0.5rem;
+    width: auto;
+    max-height: 60vh;
+    border-radius: 16px;
+  }
+
+  .content {
+    max-height: 40vh;
   }
 }

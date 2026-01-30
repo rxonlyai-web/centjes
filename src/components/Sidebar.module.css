@@ -136,7 +136,7 @@
   font-weight: 600;
 }
 
-/* Hamburger button */
+/* Hamburger button - hidden on mobile (bottom nav replaces it) */
 .hamburger {
   display: none;
   position: fixed;
@@ -156,13 +156,7 @@
   background-color: rgba(255, 255, 255, 0.1);
 }
 
-@media (max-width: 768px) {
-  .hamburger {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-}
+/* Hamburger hidden on mobile - bottom nav replaces it */
 
 /* Overlay */
 .overlay {
