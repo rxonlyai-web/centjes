@@ -8,8 +8,7 @@
 
 @media (max-width: 768px) {
   .container {
-    padding: 2rem 1rem;
-    padding-top: 5rem; /* Space for hamburger */
+    padding: 1.5rem 1rem;
   }
 }
 
@@ -23,8 +22,8 @@
 
 @media (max-width: 768px) {
   .header {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    align-items: center;
     margin-bottom: 2rem;
   }
 }
@@ -80,8 +79,8 @@
 
 @media (max-width: 768px) {
   .button {
-    width: 100%;
-    padding: 12px 20px;
+    padding: 8px 16px;
+    font-size: 13px;
   }
 }
 
@@ -100,6 +99,34 @@
   font-size: 16px;
   text-align: center;
   font-weight: 400;
+}
+
+.loadMoreContainer {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 0 1rem;
+}
+
+.loadMoreButton {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.8);
+  padding: 10px 28px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.loadMoreButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.loadMoreButton:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 @media (max-width: 768px) {

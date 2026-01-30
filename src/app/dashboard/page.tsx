@@ -19,15 +19,20 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
+import dynamic from 'next/dynamic'
 import { useActiveYear } from '@/contexts/YearContext'
 import { getIBSummary, type IBSummary } from './ib/actions'
 import KPICards from './ib/components/KPICards'
-import MonthlyChart from './ib/components/MonthlyChart'
 import CategoryTable from './ib/components/CategoryTable'
 import CostClassificationTable from './ib/components/CostClassificationTable'
 import Drawer from '@/components/Drawer'
 import TransactionForm from '@/components/TransactionForm'
 import styles from './ib/ib.module.css'
+
+const MonthlyChart = dynamic(() => import('./ib/components/MonthlyChart'), {
+  ssr: false,
+  loading: () => <div style={{ height: 350, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.4)' }}>Grafiek laden...</div>
+})
 
 export default function DashboardPage() {
   // Get active year from global context
@@ -44,16 +49,6 @@ export default function DashboardPage() {
     try {
       const data = await getIBSummary(activeYear)
       setSummary(data)
-      
-      // Console debug output for validation
-      console.log(`[Dashboard] Loaded IB summary for ${activeYear}:`, {
-        transactions: data.debug.transactionCount,
-        revenue_transactions: data.debug.revenueCount,
-        expense_transactions: data.debug.expenseCount,
-        total_omzet: data.totals.omzet,
-        total_kosten: data.totals.kosten,
-        winst: data.totals.winst
-      })
     } catch (error) {
       console.error('Failed to load IB summary:', error)
     } finally {

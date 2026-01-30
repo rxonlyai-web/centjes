@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { calculateVATAmount } from '@/lib/vat'
 
 /**
  * Dutch VAT Summary for quarterly reporting
@@ -63,31 +64,6 @@ function getQuarterDateRange(year: number, quarter: 1 | 2 | 3 | 4): { start: str
     start: startDate.toISOString(),
     end: endDate.toISOString(),
   }
-}
-
-/**
- * Calculate VAT amounts from a transaction amount that INCLUDES VAT
- * 
- * Dutch VAT calculation:
- * - Amount stored in DB includes VAT
- * - To get amount excluding VAT: amount / (1 + vat_rate/100)
- * - VAT amount = amount_incl - amount_excl
- */
-function calculateVAT(amountIncludingVAT: number, vatRate: number): { amountExcl: number; vatAmount: number } {
-  if (vatRate === 0) {
-    return { amountExcl: amountIncludingVAT, vatAmount: 0 }
-  }
-
-  // Calculate divisor (1.21 for 21%, 1.09 for 9%)
-  const divisor = 1 + (vatRate / 100)
-  
-  // Amount excluding VAT
-  const amountExcl = amountIncludingVAT / divisor
-  
-  // VAT amount
-  const vatAmount = amountIncludingVAT - amountExcl
-
-  return { amountExcl, vatAmount }
 }
 
 /**
@@ -166,11 +142,11 @@ export async function getVATSummary(year: number, quarter: 1 | 2 | 3 | 4): Promi
     if (type_transactie === 'INKOMSTEN') {
       // Income: calculate revenue and VAT collected
       if (btw_tarief === 21) {
-        const { amountExcl, vatAmount } = calculateVAT(bedrag, 21)
+        const { amountExcl, vatAmount } = calculateVATAmount(bedrag, 21)
         omzet_21 += amountExcl
         btw_21 += vatAmount
       } else if (btw_tarief === 9) {
-        const { amountExcl, vatAmount } = calculateVAT(bedrag, 9)
+        const { amountExcl, vatAmount } = calculateVATAmount(bedrag, 9)
         omzet_9 += amountExcl
         btw_9 += vatAmount
       }
@@ -203,7 +179,7 @@ export async function getVATSummary(year: number, quarter: 1 | 2 | 3 | 4): Promi
         
       } else if (btw_tarief === 21 || btw_tarief === 9) {
         // Domestic standard/reduced rate - this goes to rubric 5b
-        const { vatAmount } = calculateVAT(bedrag, btw_tarief)
+        const { vatAmount } = calculateVATAmount(bedrag, btw_tarief)
         voorbelasting += vatAmount
       }
       // btw_tarief === 0: no VAT applicable, ignore in VAT calculation

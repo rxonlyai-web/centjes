@@ -3,6 +3,99 @@
 import { createClient } from '@/utils/supabase/server'
 import { extractExpenseData, validateExpenseData, type ExpenseData } from '@/lib/ocr/expense-ocr'
 
+/**
+ * Create a pending expense from a camera capture
+ */
+export async function createExpenseFromCamera(formData: FormData): Promise<{
+  success: boolean
+  expenseId?: string
+  error?: string
+}> {
+  const supabase = await createClient()
+
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError || !user) {
+    return { success: false, error: 'Niet ingelogd' }
+  }
+
+  const file = formData.get('file') as File | null
+  if (!file) {
+    return { success: false, error: 'Geen bestand ontvangen' }
+  }
+
+  // Validate file type
+  const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/heic', 'image/heif']
+  if (!validTypes.includes(file.type)) {
+    return { success: false, error: 'Alleen afbeeldingen toegestaan' }
+  }
+
+  // Validate file size (max 10MB)
+  if (file.size > 10 * 1024 * 1024) {
+    return { success: false, error: 'Bestand is te groot (max 10MB)' }
+  }
+
+  try {
+    // Generate unique filename
+    const timestamp = Date.now()
+    const ext = file.name.split('.').pop() || 'jpg'
+    const filename = `${timestamp}_camera.${ext}`
+    const filePath = `${user.id}/${filename}`
+
+    // Convert file to buffer for upload
+    const arrayBuffer = await file.arrayBuffer()
+    const buffer = new Uint8Array(arrayBuffer)
+
+    // Upload to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('expense-pdfs')
+      .upload(filePath, buffer, {
+        contentType: file.type,
+        upsert: false
+      })
+
+    if (uploadError) {
+      console.error('Upload error:', uploadError)
+      return { success: false, error: 'Uploaden mislukt' }
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('expense-pdfs')
+      .getPublicUrl(filePath)
+
+    const fileUrl = urlData.publicUrl
+
+    // Create pending_expense record
+    const { data: expense, error: insertError } = await supabase
+      .from('pending_expenses')
+      .insert({
+        user_id: user.id,
+        sender_email: 'camera@app',
+        subject: `Camera upload ${new Date().toLocaleDateString('nl-NL')}`,
+        received_at: new Date().toISOString(),
+        pdf_url: fileUrl,
+        pdf_filename: filename,
+        pdf_size_bytes: file.size,
+        ocr_status: 'pending',
+        status: 'pending'
+      })
+      .select('id')
+      .single()
+
+    if (insertError) {
+      console.error('Insert error:', insertError)
+      // Clean up uploaded file
+      await supabase.storage.from('expense-pdfs').remove([filePath])
+      return { success: false, error: 'Opslaan mislukt' }
+    }
+
+    return { success: true, expenseId: expense.id }
+  } catch (error) {
+    console.error('createExpenseFromCamera error:', error)
+    return { success: false, error: 'Er ging iets mis' }
+  }
+}
+
 export interface PendingExpense {
   id: string
   sender_email: string
@@ -38,22 +131,22 @@ export interface PendingExpense {
  */
 export async function getPendingExpenses(): Promise<PendingExpense[]> {
   const supabase = await createClient()
-  
+
   const { data: { user }, error: userError } = await supabase.auth.getUser()
   if (userError || !user) {
-    throw new Error('Not authenticated')
+    return []
   }
 
   const { data, error } = await supabase
     .from('pending_expenses')
-    .select('*')
+    .select('id, sender_email, subject, received_at, pdf_url, pdf_filename, pdf_size_bytes, ocr_status, ocr_completed_at, vendor_name, vendor_country, invoice_number, invoice_date, due_date, currency, subtotal, vat_rate, vat_amount, total_amount, total_amount_eur, exchange_rate, description, category, vat_treatment, eu_location, status, created_at')
     .eq('user_id', user.id)
     .eq('status', 'pending')
     .order('created_at', { ascending: false })
 
   if (error) {
     console.error('Error fetching pending expenses:', error)
-    throw new Error('Failed to fetch pending expenses')
+    return []
   }
 
   return data || []
@@ -72,7 +165,7 @@ export async function getPendingExpense(expenseId: string): Promise<PendingExpen
 
   const { data, error } = await supabase
     .from('pending_expenses')
-    .select('*')
+    .select('id, sender_email, subject, received_at, pdf_url, pdf_filename, pdf_size_bytes, ocr_status, ocr_completed_at, vendor_name, vendor_country, invoice_number, invoice_date, due_date, currency, subtotal, vat_rate, vat_amount, total_amount, total_amount_eur, exchange_rate, description, category, vat_treatment, eu_location, status, created_at')
     .eq('id', expenseId)
     .eq('user_id', user.id)
     .single()
@@ -196,9 +289,6 @@ export async function approveExpense(
   }
 
   try {
-    console.log('[approveExpense] Starting approval for expense:', expenseId)
-    console.log('[approveExpense] Expense data:', expense)
-    
     // Merge expense data with overrides
     const finalData = {
       vendor_name: overrides?.vendorName || expense.vendor_name || 'Unknown',
@@ -213,14 +303,10 @@ export async function approveExpense(
       eu_location: expense.eu_location || null
     }
 
-    console.log('[approveExpense] Final data:', finalData)
-
     // Use EUR amount if available, otherwise use original amount
     const amountToUse = expense.currency !== 'EUR' && expense.total_amount_eur 
       ? expense.total_amount_eur 
       : finalData.total_amount
-
-    console.log('[approveExpense] Amount to use:', amountToUse, 'Currency:', expense.currency)
 
     // Create transaction using correct schema
     // For eu_location: only include if reverse charge, otherwise let DB default handle it
@@ -241,8 +327,6 @@ export async function approveExpense(
       transactionData.eu_location = finalData.eu_location || 'UNKNOWN'
     }
 
-    console.log('[approveExpense] Transaction data to insert:', transactionData)
-
     const { data: transaction, error: transactionError } = await supabase
       .from('transacties')
       .insert(transactionData)
@@ -251,11 +335,8 @@ export async function approveExpense(
 
     if (transactionError) {
       console.error('[approveExpense] Transaction insert error:', transactionError)
-      console.error('[approveExpense] Error details:', JSON.stringify(transactionError, null, 2))
       throw transactionError
     }
-
-    console.log('[approveExpense] Transaction created:', transaction)
 
     // Update expense status
     const { error: updateError } = await supabase
@@ -272,12 +353,9 @@ export async function approveExpense(
       throw updateError
     }
 
-    console.log('[approveExpense] Success! Transaction ID:', transaction.id)
     return { success: true, transactionId: transaction.id }
   } catch (error) {
-    console.error('[approveExpense] CATCH ERROR:', error)
-    console.error('[approveExpense] Error type:', typeof error)
-    console.error('[approveExpense] Error details:', JSON.stringify(error, null, 2))
+    console.error('[approveExpense] Error:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to approve expense'

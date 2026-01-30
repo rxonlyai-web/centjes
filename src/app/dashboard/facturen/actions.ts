@@ -56,7 +56,7 @@ export async function startInvoiceConversation(): Promise<{
   // Get company settings for context
   const { data: companySettings } = await supabase
     .from('company_settings')
-    .select('*')
+    .select('company_name, kvk_number, btw_number, address_line1, city')
     .eq('user_id', user.id)
     .single()
 
@@ -121,7 +121,7 @@ export async function sendInvoiceMessage(
   // Get conversation
   const { data: conversation, error: convError } = await supabase
     .from('invoice_conversations')
-    .select('*')
+    .select('id, messages, conversation_state')
     .eq('id', conversationId)
     .eq('user_id', user.id)
     .single()
@@ -133,7 +133,7 @@ export async function sendInvoiceMessage(
   // Get company settings for AI context
   const { data: companySettings } = await supabase
     .from('company_settings')
-    .select('*')
+    .select('company_name, kvk_number, btw_number, address_line1, city')
     .eq('user_id', user.id)
     .single()
 
@@ -152,7 +152,7 @@ export async function sendInvoiceMessage(
   const aiResponse = await generateAIResponse(
     messages,
     state,
-    companySettings,
+    companySettings || { company_name: 'Onbekend' },
     userMessage
   )
 
@@ -226,8 +226,6 @@ function generateSmartRuleBasedResponse(
   let nextStep = step
   let updatedData = { ...data }
   let isComplete = false
-
-  console.log(`[AI] Step: ${step}, User: "${userMessage}"`)
 
   switch (step) {
     case 'client_name':
@@ -322,8 +320,6 @@ function generateSmartRuleBasedResponse(
       nextStep = 'client_name'
       updatedData = {}
   }
-
-  console.log(`[AI] Next step: ${nextStep}, Complete: ${isComplete}`)
 
   return {
     message,
@@ -576,7 +572,7 @@ export async function getInvoiceById(invoiceId: string): Promise<InvoiceWithItem
   // Get invoice
   const { data: invoice, error: invoiceError } = await supabase
     .from('invoices')
-    .select('*')
+    .select('id, invoice_number, status, client_name, client_email, client_address, client_kvk, client_btw, invoice_date, due_date, payment_terms, subtotal, vat_rate, vat_amount, total_amount, notes, created_at, updated_at')
     .eq('id', invoiceId)
     .eq('user_id', user.id)
     .single()
@@ -589,7 +585,7 @@ export async function getInvoiceById(invoiceId: string): Promise<InvoiceWithItem
   // Get invoice items
   const { data: items, error: itemsError } = await supabase
     .from('invoice_items')
-    .select('*')
+    .select('id, description, quantity, unit_price, total_price, sort_order')
     .eq('invoice_id', invoiceId)
     .order('sort_order', { ascending: true })
 
@@ -601,7 +597,7 @@ export async function getInvoiceById(invoiceId: string): Promise<InvoiceWithItem
   // Get company settings
   const { data: companySettings } = await supabase
     .from('company_settings')
-    .select('*')
+    .select('company_name, kvk_number, btw_number, address_line1, address_line2, postal_code, city, country, email, phone, bank_account')
     .eq('user_id', user.id)
     .single()
 

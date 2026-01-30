@@ -3,7 +3,7 @@
  * Uses Google Gemini to extract structured data from expense PDFs
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { getGeminiClient } from '@/lib/gemini'
 
 export interface ExpenseData {
   vendorName: string
@@ -26,27 +26,46 @@ export interface ExpenseData {
 }
 
 /**
- * Extract expense data from PDF using Gemini Vision
+ * Detect MIME type from URL or file extension
  */
-export async function extractExpenseData(pdfUrl: string): Promise<ExpenseData> {
-  const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
-  
-  if (!apiKey) {
-    throw new Error('GOOGLE_GENERATIVE_AI_API_KEY not configured')
+function getMimeType(url: string): string {
+  const urlLower = url.toLowerCase()
+
+  if (urlLower.includes('.pdf')) {
+    return 'application/pdf'
+  } else if (urlLower.includes('.png')) {
+    return 'image/png'
+  } else if (urlLower.includes('.jpg') || urlLower.includes('.jpeg')) {
+    return 'image/jpeg'
+  } else if (urlLower.includes('.heic')) {
+    return 'image/heic'
+  } else if (urlLower.includes('.heif')) {
+    return 'image/heif'
+  } else if (urlLower.includes('.webp')) {
+    return 'image/webp'
   }
 
+  // Default to PDF for backwards compatibility
+  return 'application/pdf'
+}
+
+/**
+ * Extract expense data from PDF or image using Gemini Vision
+ */
+export async function extractExpenseData(fileUrl: string): Promise<ExpenseData> {
   // Initialize Gemini
-  const genAI = new GoogleGenerativeAI(apiKey)
+  const genAI = getGeminiClient()
   const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
 
-  // Download PDF
-  const response = await fetch(pdfUrl)
+  // Download file
+  const response = await fetch(fileUrl)
   if (!response.ok) {
-    throw new Error(`Failed to download PDF: ${response.statusText}`)
+    throw new Error(`Failed to download file: ${response.statusText}`)
   }
 
-  const pdfBuffer = await response.arrayBuffer()
-  const base64Pdf = Buffer.from(pdfBuffer).toString('base64')
+  const fileBuffer = await response.arrayBuffer()
+  const base64File = Buffer.from(fileBuffer).toString('base64')
+  const mimeType = getMimeType(fileUrl)
 
   // Prepare prompt (matching the existing receipt OCR logic)
   const prompt = `
@@ -120,8 +139,8 @@ Do not include any explanation, only return the JSON object.
   const result = await model.generateContent([
     {
       inlineData: {
-        mimeType: 'application/pdf',
-        data: base64Pdf
+        mimeType: mimeType,
+        data: base64File
       }
     },
     { text: prompt }

@@ -61,6 +61,11 @@ export default function TransactiesPage() {
   // Month filter state
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null)
 
+  // Pagination state
+  const [page, setPage] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+
   // Set default month based on active year
   useEffect(() => {
     const currentYear = new Date().getFullYear()
@@ -75,16 +80,33 @@ export default function TransactiesPage() {
 
   const loadTransactions = useCallback(async () => {
     setIsLoading(true)
+    setPage(0)
     try {
-      const data = await getTransactionsWithTotals(activeYear, selectedMonth)
+      const data = await getTransactionsWithTotals(activeYear, selectedMonth, 0)
       setTransactions(data.transactions as Transaction[])
       setTotals(data.totals)
+      setHasMore(data.hasMore)
     } catch (error) {
       console.error('Failed to load transactions:', error)
     } finally {
       setIsLoading(false)
     }
   }, [activeYear, selectedMonth])
+
+  const loadMore = useCallback(async () => {
+    const nextPage = page + 1
+    setIsLoadingMore(true)
+    try {
+      const data = await getTransactionsWithTotals(activeYear, selectedMonth, nextPage)
+      setTransactions(prev => [...prev, ...(data.transactions as Transaction[])])
+      setHasMore(data.hasMore)
+      setPage(nextPage)
+    } catch (error) {
+      console.error('Failed to load more transactions:', error)
+    } finally {
+      setIsLoadingMore(false)
+    }
+  }, [activeYear, selectedMonth, page])
 
   useEffect(() => {
     loadTransactions()
@@ -175,10 +197,23 @@ export default function TransactiesPage() {
             <p>Laden...</p>
           </div>
         ) : (
-          <TransactionList 
-            transactions={filteredTransactions}
-            onTransactionClick={handleTransactionClick}
-          />
+          <>
+            <TransactionList
+              transactions={filteredTransactions}
+              onTransactionClick={handleTransactionClick}
+            />
+            {hasMore && (
+              <div className={styles.loadMoreContainer}>
+                <button
+                  className={styles.loadMoreButton}
+                  onClick={loadMore}
+                  disabled={isLoadingMore}
+                >
+                  {isLoadingMore ? 'Laden...' : 'Meer laden'}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </main>
 

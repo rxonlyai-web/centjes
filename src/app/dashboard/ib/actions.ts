@@ -11,6 +11,7 @@
  */
 
 import { createClient } from '@/utils/supabase/server'
+import { calculateExclVAT } from '@/lib/vat'
 
 export interface IBSummary {
   totals: {
@@ -87,25 +88,6 @@ const LIMITED_DEDUCTIBLE_CATEGORIES = [
 ]
 
 const LIMITED_DEDUCTIBLE_PERCENTAGE = 0.80  // 80% deductible
-
-/**
- * Calculate amount excluding VAT
- * 
- * Dutch VAT calculation:
- * - Reverse Charge: amount is already net (excl. VAT)
- * - 21% VAT: amount / 1.21
- * - 9% VAT: amount / 1.09
- * - 0% VAT: amount (no VAT applied)
- */
-function calculateExclVAT(amountInclVAT: number, vatRate: number, vatTreatment?: string): number {
-  if (vatTreatment === 'foreign_service_reverse_charge') {
-    return amountInclVAT
-  }
-  if (vatRate === 0) return amountInclVAT
-  if (vatRate === 21) return amountInclVAT / 1.21
-  if (vatRate === 9) return amountInclVAT / 1.09
-  return amountInclVAT
-}
 
 /**
  * Get comprehensive IB summary for a specific year
@@ -240,18 +222,6 @@ export async function getIBSummary(year: number): Promise<IBSummary> {
 
   const revenueCount = typedTransactions.filter(t => t.type_transactie === 'INKOMSTEN').length
   const expenseCount = typedTransactions.filter(t => t.type_transactie === 'UITGAVEN').length
-
-  // Debug logging
-  console.log(`[IB Summary ${year}]`, {
-    transactionCount: typedTransactions.length,
-    revenueCount,
-    expenseCount,
-    totalRevenue: totalOmzet.toFixed(2),
-    totalExpenses: totalKosten.toFixed(2),
-    profit: winst.toFixed(2),
-    fullyDeductible: fullyDeductible.toFixed(2),
-    limitedDeductible: limitedDeductible.toFixed(2)
-  })
 
   return {
     totals: {

@@ -2,7 +2,8 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { getGeminiClient } from '@/lib/gemini'
+import { calculateExclVAT } from '@/lib/vat'
 
 /**
  * Create a transaction automatically from a receipt upload
@@ -101,13 +102,8 @@ export async function createTransactionFromReceipt(formData: FormData) {
     const base64Data = Buffer.from(arrayBuffer).toString('base64')
 
     // 4. Call Gemini to extract invoice fields
-    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
-    if (!apiKey) {
-      throw new Error('GOOGLE_GENERATIVE_AI_API_KEY is missing in .env.local. Please add it and restart the server.')
-    }
+    const genAI = getGeminiClient()
 
-    const genAI = new GoogleGenerativeAI(apiKey)
-    
     // Try gemini-2.0-flash first, fallback to gemini-1.5-flash
     let model
     try {
@@ -229,9 +225,6 @@ export async function createTransactionFromReceipt(formData: FormData) {
       throw new Error('Kon transactie niet aanmaken. Probeer het opnieuw.')
     }
 
-    console.log('[createTransactionFromReceipt] Transaction created:', transactionResult.id)
-    console.log('[createTransactionFromReceipt] Linking document:', documentId, 'to transaction:', transactionResult.id)
-
     // Link document to transaction via join table
     const { error: linkError } = await supabase
       .from('transaction_documents')
@@ -242,10 +235,6 @@ export async function createTransactionFromReceipt(formData: FormData) {
 
     if (linkError) {
       console.error('[createTransactionFromReceipt] Failed to link document to transaction:', linkError)
-      // Non-fatal: transaction was created successfully
-      // The document exists but isn't linked - user can still see transaction
-    } else {
-      console.log('[createTransactionFromReceipt] Successfully linked document to transaction')
     }
 
     // Revalidate all affected pages
@@ -339,12 +328,7 @@ export async function extractTransactionFromDocument(formData: FormData) {
     const base64Data = Buffer.from(arrayBuffer).toString('base64')
 
     // Call Gemini to extract invoice fields
-    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
-    if (!apiKey) {
-      throw new Error('GOOGLE_GENERATIVE_AI_API_KEY is missing in .env.local. Please add it and restart the server.')
-    }
-
-    const genAI = new GoogleGenerativeAI(apiKey)
+    const genAI = getGeminiClient()
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
 
     const promptText = `
@@ -434,9 +418,6 @@ export async function extractTransactionFromDocument(formData: FormData) {
       throw new Error('Kon factuurgegevens niet verwerken. Probeer het opnieuw of vul handmatig in.')
     }
 
-    // Create document record in database
-    console.log('[extractTransactionFromDocument] Creating document record for:', uploadData.path)
-    
     // Try with full schema first (includes migration 004 fields)
     let documentData = null
     let insertError = null
@@ -460,8 +441,6 @@ export async function extractTransactionFromDocument(formData: FormData) {
       .single()
     
     if (fullError) {
-      console.log('[extractTransactionFromDocument] Full insert failed:', fullError.message)
-      
       // Try with base schema only (without migration 004 fields)
       const baseInsert = {
         user_id: user.id,
@@ -483,11 +462,9 @@ export async function extractTransactionFromDocument(formData: FormData) {
         insertError = baseError
       } else {
         documentData = baseData
-        console.log('[extractTransactionFromDocument] Document created with base schema:', baseData.id)
       }
     } else {
       documentData = fullData
-      console.log('[extractTransactionFromDocument] Document created with full schema:', fullData.id)
     }
     
     // If both inserts failed, clean up and throw
@@ -620,7 +597,6 @@ export async function createTransaction(formData: FormData) {
 
   if (error) {
     console.error('Supabase error:', error)
-    console.error('Attempted to insert:', rawData)
     throw new Error(`Kon transactie niet opslaan: ${error.message}`)
   }
 
@@ -628,8 +604,6 @@ export async function createTransaction(formData: FormData) {
   // Check if bon_url is a storage path (from extractTransactionFromDocument)
   const uploadedStoragePath = formData.get('bon_url') as string | null
   if (uploadedStoragePath && !uploadedStoragePath.startsWith('http')) {
-    console.log('[createTransaction] Attempting to link document with path:', uploadedStoragePath)
-    
     // Find document by storage_path OR file_path (for backward compatibility)
     const { data: documents, error: docFindError } = await supabase
       .from('documents')
@@ -640,25 +614,16 @@ export async function createTransaction(formData: FormData) {
 
     if (docFindError) {
       console.error('[createTransaction] Error finding document:', docFindError)
-    } else if (!documents || documents.length === 0) {
-      console.warn('[createTransaction] No document found for path:', uploadedStoragePath)
-    } else {
-      const document = documents[0]
-      console.log('[createTransaction] Found document:', document.id)
-      
+    } else if (documents && documents.length > 0) {
       const { error: linkError } = await supabase
         .from('transaction_documents')
         .insert({
           transaction_id: newTransaction.id,
-          document_id: document.id,
+          document_id: documents[0].id,
         })
 
       if (linkError) {
-        console.error('[createTransaction] Failed to link document to transaction:', linkError)
-        // Non-fatal: transaction was created, but link failed
-        // Could be duplicate key error if already linked
-      } else {
-        console.log('[createTransaction] Successfully linked document', document.id, 'to transaction', newTransaction.id)
+        console.error('[createTransaction] Failed to link document:', linkError)
       }
     }
   }
@@ -786,7 +751,6 @@ export async function updateTransaction(transactionId: string, formData: FormDat
 
   if (error) {
     console.error('Supabase error:', error)
-    console.error('Attempted to update:', updateData)
     throw new Error(`Kon transactie niet bijwerken: ${error.message}`)
   }
 
@@ -844,7 +808,7 @@ export async function getTransactions() {
 
   const { data, error } = await supabase
     .from('transacties')
-    .select('*')
+    .select('id, datum, bedrag, omschrijving, type_transactie, btw_tarief, categorie, vat_treatment, bon_url')
     .eq('gebruiker_id', user.id)
     .order('datum', { ascending: false })
 
@@ -875,7 +839,7 @@ export async function getTransaction(transactionId: string) {
 
   const { data, error } = await supabase
     .from('transacties')
-    .select('*')
+    .select('id, gebruiker_id, datum, bedrag, omschrijving, type_transactie, btw_tarief, categorie, vat_treatment, eu_location, bon_url')
     .eq('id', transactionId)
     .eq('gebruiker_id', user.id)
     .single()
@@ -907,7 +871,6 @@ export async function getTransaction(transactionId: string) {
  */
 interface Transaction {
   id: string
-  gebruiker_id: string
   datum: string
   bedrag: number
   omschrijving: string
@@ -920,7 +883,9 @@ interface Transaction {
 
 export async function getTransactionsWithTotals(
   year: number,
-  month?: number | null
+  month?: number | null,
+  page: number = 0,
+  pageSize: number = 50
 ): Promise<{
   transactions: Transaction[]
   totals: {
@@ -928,6 +893,7 @@ export async function getTransactionsWithTotals(
     uitgaven: number
     resultaat: number
   }
+  hasMore: boolean
 }> {
   const supabase = await createClient()
 
@@ -938,7 +904,8 @@ export async function getTransactionsWithTotals(
   if (!user) {
     return {
       transactions: [],
-      totals: { inkomsten: 0, uitgaven: 0, resultaat: 0 }
+      totals: { inkomsten: 0, uitgaven: 0, resultaat: 0 },
+      hasMore: false
     }
   }
 
@@ -957,40 +924,29 @@ export async function getTransactionsWithTotals(
     endDate = `${year}-12-31T23:59:59`
   }
 
-  // Fetch transactions
-  const { data: transactions, error } = await supabase
+  // Fetch totals (lightweight query over all matching rows)
+  const { data: allTransactions, error: totalsError } = await supabase
     .from('transacties')
-    .select('*')
+    .select('bedrag, type_transactie, btw_tarief, vat_treatment')
     .eq('gebruiker_id', user.id)
     .gte('datum', startDate)
     .lte('datum', endDate)
-    .order('datum', { ascending: false })
 
-  if (error) {
-    console.error('Error fetching transactions:', error)
+  if (totalsError) {
+    console.error('Error fetching transaction totals:', totalsError)
     return {
       transactions: [],
-      totals: { inkomsten: 0, uitgaven: 0, resultaat: 0 }
+      totals: { inkomsten: 0, uitgaven: 0, resultaat: 0 },
+      hasMore: false
     }
   }
 
-  // Calculate VAT-excluded totals
+  // Calculate VAT-excluded totals from full dataset
   let totalInkomsten = 0
   let totalUitgaven = 0
 
-  for (const transaction of transactions || []) {
-    // Calculate amount excluding VAT
-    let amountExcl = transaction.bedrag
-    
-    // If reverse charge, the amount is already net (excl. VAT)
-    if (transaction.vat_treatment === 'foreign_service_reverse_charge') {
-      amountExcl = transaction.bedrag
-    } else if (transaction.btw_tarief === 21) {
-      amountExcl = transaction.bedrag / 1.21
-    } else if (transaction.btw_tarief === 9) {
-      amountExcl = transaction.bedrag / 1.09
-    }
-    // If VAT rate is 0, amountExcl stays as is
+  for (const transaction of allTransactions || []) {
+    const amountExcl = calculateExclVAT(transaction.bedrag, transaction.btw_tarief, transaction.vat_treatment)
 
     if (transaction.type_transactie === 'INKOMSTEN') {
       totalInkomsten += amountExcl
@@ -1001,13 +957,40 @@ export async function getTransactionsWithTotals(
 
   const resultaat = totalInkomsten - totalUitgaven
 
+  // Fetch paginated transactions for display
+  const from = page * pageSize
+  const to = from + pageSize
+
+  const { data: transactions, error } = await supabase
+    .from('transacties')
+    .select('id, datum, bedrag, omschrijving, type_transactie, btw_tarief, categorie, vat_treatment, bon_url')
+    .eq('gebruiker_id', user.id)
+    .gte('datum', startDate)
+    .lte('datum', endDate)
+    .order('datum', { ascending: false })
+    .range(from, to)
+
+  if (error) {
+    console.error('Error fetching transactions:', error)
+    return {
+      transactions: [],
+      totals: { inkomsten: 0, uitgaven: 0, resultaat: 0 },
+      hasMore: false
+    }
+  }
+
+  const fetchedCount = transactions?.length || 0
+  const hasMore = fetchedCount > pageSize
+  const pageTransactions = hasMore ? transactions!.slice(0, pageSize) : (transactions || [])
+
   return {
-    transactions: transactions || [],
+    transactions: pageTransactions,
     totals: {
       inkomsten: Math.round(totalInkomsten * 100) / 100,
       uitgaven: Math.round(totalUitgaven * 100) / 100,
       resultaat: Math.round(resultaat * 100) / 100
-    }
+    },
+    hasMore
   }
 }
 
@@ -1025,11 +1008,8 @@ export async function getTransactionDocuments(transactionId: string) {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    console.log('[getTransactionDocuments] No user found')
     return []
   }
-
-  console.log('[getTransactionDocuments] Fetching documents for transaction:', transactionId)
 
   // Select only base schema fields (file_path, original_filename, mime_type)
   // uploaded_at may not exist in all schemas
@@ -1051,8 +1031,6 @@ export async function getTransactionDocuments(transactionId: string) {
     return []
   }
 
-  console.log('[getTransactionDocuments] Raw data:', data)
-
   // Flatten the nested structure and map to expected format
   const documents = (data || [])
     .map((item: { documents: unknown }) => {
@@ -1068,8 +1046,6 @@ export async function getTransactionDocuments(transactionId: string) {
       }
     })
     .filter(Boolean)
-
-  console.log('[getTransactionDocuments] Flattened documents:', documents)
 
   return documents
 }
@@ -1088,11 +1064,8 @@ export async function getDocumentSignedUrl(storagePath: string): Promise<string 
   } = await supabase.auth.getUser()
 
   if (!user) {
-    console.log('[getDocumentSignedUrl] No user found')
     return null
   }
-
-  console.log('[getDocumentSignedUrl] Generating signed URL for:', storagePath)
 
   // Verify user owns this document (via RLS)
   const { data: document } = await supabase
@@ -1107,8 +1080,6 @@ export async function getDocumentSignedUrl(storagePath: string): Promise<string 
     return null
   }
 
-  console.log('[getDocumentSignedUrl] Document found, bucket:', document.storage_bucket)
-
   const { data, error } = await supabase.storage
     .from(document.storage_bucket)
     .createSignedUrl(storagePath, 3600) // 1 hour expiry
@@ -1117,8 +1088,6 @@ export async function getDocumentSignedUrl(storagePath: string): Promise<string 
     console.error('[getDocumentSignedUrl] Failed to create signed URL:', error)
     return null
   }
-
-  console.log('[getDocumentSignedUrl] Signed URL created successfully')
 
   return data.signedUrl
 }
@@ -1144,7 +1113,7 @@ export async function getTaxDeadlines(year: number) {
   // Fetch existing deadlines for this year
   const { data: existingDeadlines, error: fetchError } = await supabase
     .from('tax_deadlines')
-    .select('*')
+    .select('id, deadline_type, tax_year, deadline_date, acknowledged, acknowledged_at')
     .eq('user_id', user.id)
     .eq('tax_year', year)
     .order('deadline_date', { ascending: true })
