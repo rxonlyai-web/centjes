@@ -5,6 +5,29 @@ import { X, FileText, Check, XCircle, Loader2, AlertCircle, ExternalLink } from 
 import { getPendingExpense, runExpenseOCR, approveExpense, rejectExpense, type PendingExpense } from '@/app/dashboard/uitgaven/actions'
 import styles from './ExpenseReviewModal.module.css'
 
+// Map OCR English categories to DB values
+const CATEGORY_MAP: Record<string, string> = {
+  'Software': 'Kantoor',
+  'Office Supplies': 'Kantoor',
+  'Services': 'Inkoop',
+  'Marketing': 'Overig',
+  'Travel': 'Reiskosten',
+  'Meals': 'Overig',
+  'Utilities': 'Overig',
+  'Other': 'Overig',
+}
+
+function mapCategory(category: string | null): string {
+  if (!category) return ''
+  if (['Inkoop', 'Sales', 'Reiskosten', 'Kantoor', 'Overig'].includes(category)) return category
+  return CATEGORY_MAP[category] || 'Overig'
+}
+
+function isImageFile(filename: string): boolean {
+  const ext = filename.toLowerCase().split('.').pop()
+  return ['jpg', 'jpeg', 'png', 'heic', 'heif', 'webp'].includes(ext || '')
+}
+
 interface ExpenseReviewModalProps {
   expenseId: string
   onClose: () => void
@@ -43,7 +66,7 @@ export default function ExpenseReviewModal({
       setAmount(expense.total_amount?.toString() || '')
       setDescription(expense.description || expense.subject)
       setVatRate(expense.vat_rate?.toString() || '21')
-      setCategory(expense.category || '')
+      setCategory(mapCategory(expense.category))
     }
   }, [expense])
 
@@ -204,6 +227,32 @@ export default function ExpenseReviewModal({
 
         {/* Content */}
         <div className={styles.content}>
+          {/* PDF Preview */}
+          <div className={styles.previewSection}>
+            {isImageFile(expense.pdf_filename) ? (
+              <img
+                src={expense.pdf_url}
+                alt="Factuur preview"
+                className={styles.previewImage}
+              />
+            ) : (
+              <iframe
+                src={expense.pdf_url}
+                title="Factuur preview"
+                className={styles.previewIframe}
+              />
+            )}
+            <a
+              href={expense.pdf_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.previewLink}
+            >
+              <ExternalLink size={14} />
+              Open in nieuw tabblad
+            </a>
+          </div>
+
           <div className={styles.formSection}>
             {error && (
               <div className={styles.alert} data-type="error">
@@ -219,7 +268,17 @@ export default function ExpenseReviewModal({
               </div>
             )}
 
-            {!hasOcrData && !ocrRunning && (
+            {expense.ocr_status === 'failed' && (
+              <div className={styles.alert} data-type="error">
+                <AlertCircle size={20} />
+                <span>
+                  Automatisch uitlezen mislukt{expense.ocr_error ? `: ${expense.ocr_error}` : ''}.
+                  Vul de gegevens handmatig in.
+                </span>
+              </div>
+            )}
+
+            {!hasOcrData && expense.ocr_status !== 'failed' && !ocrRunning && (
               <div className={styles.alert} data-type="info">
                 <AlertCircle size={16} />
                 <span>Factuurgegevens worden uitgelezen bij goedkeuren</span>
@@ -249,7 +308,6 @@ export default function ExpenseReviewModal({
                 />
               </div>
 
-
               <div className={styles.formGroup}>
                 <label>
                   Bedrag ({expense?.currency || '€'}) *
@@ -274,7 +332,6 @@ export default function ExpenseReviewModal({
                   </small>
                 )}
               </div>
-
 
               <div className={styles.formGroup}>
                 <label>Omschrijving *</label>
@@ -309,28 +366,12 @@ export default function ExpenseReviewModal({
                   className={styles.select}
                 >
                   <option value="">Selecteer een categorie</option>
-                  <option value="Office Supplies">Kantoorbenodigdheden</option>
-                  <option value="Software">Software</option>
-                  <option value="Marketing">Marketing</option>
-                  <option value="Travel">Reiskosten</option>
-                  <option value="Meals">Maaltijden</option>
-                  <option value="Utilities">Nutsvoorzieningen</option>
-                  <option value="Other">Overig</option>
+                  <option value="Inkoop">Inkoop</option>
+                  <option value="Sales">Sales</option>
+                  <option value="Reiskosten">Reiskosten</option>
+                  <option value="Kantoor">Kantoor</option>
+                  <option value="Overig">Overig</option>
                 </select>
-              </div>
-
-              {/* PDF Link */}
-              <div className={styles.pdfLink}>
-                <FileText size={16} />
-                <a 
-                  href={expense.pdf_url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className={styles.link}
-                >
-                  Bekijk PDF ({expense.pdf_filename})
-                  <ExternalLink size={14} />
-                </a>
               </div>
             </div>
           </div>

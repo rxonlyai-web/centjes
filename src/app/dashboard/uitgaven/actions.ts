@@ -122,6 +122,7 @@ export interface PendingExpense {
   category: string | null
   vat_treatment: string | null
   eu_location: string | null
+  ocr_error: string | null
   status: string
   created_at: string
 }
@@ -139,7 +140,7 @@ export async function getPendingExpenses(): Promise<PendingExpense[]> {
 
   const { data, error } = await supabase
     .from('pending_expenses')
-    .select('id, sender_email, subject, received_at, pdf_url, pdf_filename, pdf_size_bytes, ocr_status, ocr_completed_at, vendor_name, vendor_country, invoice_number, invoice_date, due_date, currency, subtotal, vat_rate, vat_amount, total_amount, total_amount_eur, exchange_rate, description, category, vat_treatment, eu_location, status, created_at')
+    .select('id, sender_email, subject, received_at, pdf_url, pdf_filename, pdf_size_bytes, ocr_status, ocr_completed_at, vendor_name, vendor_country, invoice_number, invoice_date, due_date, currency, subtotal, vat_rate, vat_amount, total_amount, total_amount_eur, exchange_rate, description, category, vat_treatment, eu_location, ocr_error, status, created_at')
     .eq('user_id', user.id)
     .eq('status', 'pending')
     .order('created_at', { ascending: false })
@@ -165,7 +166,7 @@ export async function getPendingExpense(expenseId: string): Promise<PendingExpen
 
   const { data, error } = await supabase
     .from('pending_expenses')
-    .select('id, sender_email, subject, received_at, pdf_url, pdf_filename, pdf_size_bytes, ocr_status, ocr_completed_at, vendor_name, vendor_country, invoice_number, invoice_date, due_date, currency, subtotal, vat_rate, vat_amount, total_amount, total_amount_eur, exchange_rate, description, category, vat_treatment, eu_location, status, created_at')
+    .select('id, sender_email, subject, received_at, pdf_url, pdf_filename, pdf_size_bytes, ocr_status, ocr_completed_at, vendor_name, vendor_country, invoice_number, invoice_date, due_date, currency, subtotal, vat_rate, vat_amount, total_amount, total_amount_eur, exchange_rate, description, category, vat_treatment, eu_location, ocr_error, status, created_at')
     .eq('id', expenseId)
     .eq('user_id', user.id)
     .single()
@@ -264,6 +265,23 @@ export async function runExpenseOCR(expenseId: string): Promise<{
   }
 }
 
+const VALID_CATEGORIES = ['Inkoop', 'Sales', 'Reiskosten', 'Kantoor', 'Overig'] as const
+const CATEGORY_FALLBACK: Record<string, string> = {
+  'Software': 'Kantoor',
+  'Office Supplies': 'Kantoor',
+  'Services': 'Inkoop',
+  'Marketing': 'Overig',
+  'Travel': 'Reiskosten',
+  'Meals': 'Overig',
+  'Utilities': 'Overig',
+  'Other': 'Overig',
+}
+
+function sanitizeCategory(category: string): string {
+  if ((VALID_CATEGORIES as readonly string[]).includes(category)) return category
+  return CATEGORY_FALLBACK[category] || 'Overig'
+}
+
 /**
  * Approve expense and create transaction
  */
@@ -290,6 +308,7 @@ export async function approveExpense(
 
   try {
     // Merge expense data with overrides
+    const rawCategory = overrides?.category || expense.category || 'Overig'
     const finalData = {
       vendor_name: overrides?.vendorName || expense.vendor_name || 'Unknown',
       invoice_date: overrides?.invoiceDate || expense.invoice_date || new Date().toISOString().split('T')[0],
@@ -298,7 +317,7 @@ export async function approveExpense(
       vat_amount: overrides?.vatAmount || expense.vat_amount || 0,
       total_amount: overrides?.totalAmount || expense.total_amount || 0,
       description: overrides?.description || expense.description || expense.subject,
-      category: overrides?.category || expense.category || 'Overig',
+      category: sanitizeCategory(rawCategory),
       vat_treatment: expense.vat_treatment || 'domestic',
       eu_location: expense.eu_location || null
     }

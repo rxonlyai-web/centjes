@@ -199,7 +199,7 @@ Do not include any explanation, only return the JSON object.
       totalAmountEur: totalAmountEur ? Number(totalAmountEur.toFixed(2)) : undefined,
       exchangeRate: exchangeRate ? Number(exchangeRate.toFixed(4)) : undefined,
       description: data.description || undefined,
-      category: data.category || 'Other',
+      category: mapOcrCategory(data.category),
       vatTreatment: (data.vatTreatment === 'domestic' || data.vatTreatment === 'foreign_service_reverse_charge' || data.vatTreatment === 'unknown') 
         ? data.vatTreatment 
         : 'unknown',
@@ -213,6 +213,25 @@ Do not include any explanation, only return the JSON object.
     console.error('Response text:', responseText)
     throw new Error('Failed to extract expense data from PDF')
   }
+}
+
+/**
+ * Map English OCR category names to Dutch DB constraint values
+ */
+function mapOcrCategory(category: string | undefined | null): string {
+  const map: Record<string, string> = {
+    'Software': 'Kantoor',
+    'Office Supplies': 'Kantoor',
+    'Services': 'Inkoop',
+    'Marketing': 'Overig',
+    'Travel': 'Reiskosten',
+    'Meals': 'Overig',
+    'Utilities': 'Overig',
+    'Other': 'Overig',
+  }
+  if (!category) return 'Overig'
+  if (['Inkoop', 'Sales', 'Reiskosten', 'Kantoor', 'Overig'].includes(category)) return category
+  return map[category] || 'Overig'
 }
 
 /**
