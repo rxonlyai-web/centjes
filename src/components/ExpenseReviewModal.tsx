@@ -80,15 +80,13 @@ export default function ExpenseReviewModal({
         // Auto-run OCR if not done yet
         if (data.ocr_status === 'pending') {
           setOcrRunning(true)
-          const ocrResult = await runExpenseOCR(expenseId)
+          await runExpenseOCR(expenseId)
           setOcrRunning(false)
-          
-          if (ocrResult.success) {
-            // Reload expense with OCR data
-            const updatedData = await getPendingExpense(expenseId)
-            if (updatedData) {
-              setExpense(updatedData)
-            }
+
+          // Always reload to get OCR data or failure status
+          const updatedData = await getPendingExpense(expenseId)
+          if (updatedData) {
+            setExpense(updatedData)
           }
         }
       } else {
@@ -107,8 +105,12 @@ export default function ExpenseReviewModal({
     if (!expense) return
 
     // Validate form
-    if (!date || !amount || !description) {
-      setError('Vul alle verplichte velden in')
+    const missing: string[] = []
+    if (!date) missing.push('Datum')
+    if (!amount) missing.push('Bedrag')
+    if (!description) missing.push('Omschrijving')
+    if (missing.length > 0) {
+      setError(`Vul de volgende velden in: ${missing.join(', ')}`)
       return
     }
 
