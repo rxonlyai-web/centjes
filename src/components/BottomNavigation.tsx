@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Home, Receipt, Camera, FileText, Settings } from 'lucide-react'
+import { Home, Receipt, Camera, FileText, Calculator } from 'lucide-react'
 import styles from './BottomNavigation.module.css'
 
 interface BottomNavigationProps {
@@ -18,7 +18,7 @@ export default function BottomNavigation({ onCameraClick, onNavigate }: BottomNa
     { name: 'Transacties', href: '/dashboard/transacties', icon: Receipt },
     { name: 'Camera', href: '#', icon: Camera, isCamera: true },
     { name: 'Facturen', href: '/dashboard/facturen', icon: FileText },
-    { name: 'Instellingen', href: '/dashboard/instellingen', icon: Settings },
+    { name: 'BTW', href: '/dashboard/btw', icon: Calculator },
   ]
 
   return (

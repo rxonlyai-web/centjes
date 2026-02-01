@@ -1,7 +1,7 @@
-/* BTW Overview page styling - consistent with dashboard dark mode */
+/* BTW Aangifte page - mirrors Belastingdienst form */
 
 .container {
-  max-width: 1000px;
+  max-width: 800px;
   margin: 0 auto;
   padding: 4rem 2rem;
 }
@@ -13,13 +13,7 @@
 }
 
 .header {
-  margin-bottom: 3rem;
-}
-
-@media (max-width: 768px) {
-  .header {
-    margin-bottom: 2rem;
-  }
+  margin-bottom: 2rem;
 }
 
 .title {
@@ -27,6 +21,13 @@
   font-weight: 700;
   letter-spacing: -0.03em;
   color: #f5f5f7;
+  margin: 0;
+}
+
+.headerSub {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 0.5rem;
 }
 
 @media (max-width: 768px) {
@@ -35,18 +36,11 @@
   }
 }
 
-/* Filters Section */
+/* Filters */
 .filters {
   display: flex;
   gap: 1.5rem;
   margin-bottom: 2rem;
-}
-
-@media (max-width: 768px) {
-  .filters {
-    flex-direction: column;
-    gap: 1rem;
-  }
 }
 
 .filterGroup {
@@ -91,138 +85,244 @@
   }
 }
 
-/* Main Content */
+/* Main */
 .main {
   min-height: 400px;
 }
 
-@media (max-width: 768px) {
-  .main {
-    min-height: 300px;
-  }
+/* Sections (1, 4, 5) */
+.section {
+  margin-bottom: 1.5rem;
 }
 
-/* Table Styling */
-.tableWrapper {
-  background-color: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  overflow: hidden;
-  margin-bottom: 2rem;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.tableHeader,
-.tableHeaderRight {
-  padding: 1rem 1.5rem;
-  font-size: 13px;
+.sectionTitle {
+  font-size: 14px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: rgba(255, 255, 255, 0.6);
-  background-color: rgba(255, 255, 255, 0.02);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  text-align: left;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0 0 0.75rem;
 }
 
-.tableHeaderRight {
-  text-align: right;
-  width: 150px;
+/* Rubric grid */
+.rubricGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
 }
 
-@media (max-width: 768px) {
-  .tableHeader,
-  .tableHeaderRight {
-    padding: 0.75rem 1rem;
-    font-size: 11px;
-  }
-  
-  .tableHeaderRight {
-    width: 100px;
-  }
+.rubricRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background-color: rgba(255, 255, 255, 0.03);
 }
 
-.tableRow {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+.rubricCode {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.06);
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
 }
 
-.tableRow:last-child {
-  border-bottom: none;
-}
-
-.tableCell,
-.tableCellRight {
-  padding: 1rem 1.5rem;
+.rubricLabel {
+  flex: 1;
   font-size: 15px;
   color: rgba(255, 255, 255, 0.85);
+  min-width: 0;
 }
 
-.tableCellRight {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
+.rubricValues {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
-  .tableCell,
-  .tableCellRight {
+  .rubricRow {
+    flex-wrap: wrap;
     padding: 0.75rem 1rem;
+    gap: 0.5rem;
+  }
+
+  .rubricLabel {
+    flex-basis: calc(100% - 52px);
     font-size: 14px;
+  }
+
+  .rubricValues {
+    width: 100%;
+    padding-left: 48px;
   }
 }
 
-.totalRow {
+/* Copyable value buttons */
+.copyableValue {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   background-color: rgba(255, 255, 255, 0.03);
-  border-top: 2px solid rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  transition: all 0.15s;
+  min-width: 100px;
+  text-align: right;
+  font-family: inherit;
+  color: inherit;
 }
 
-.totalRow .tableCell,
-.totalRow .tableCellRight {
-  padding-top: 1.25rem;
-  padding-bottom: 1.25rem;
+.copyableValue:hover {
+  background-color: rgba(0, 113, 227, 0.1);
+  border-color: rgba(0, 113, 227, 0.3);
+}
+
+.copyableValue.copied {
+  background-color: rgba(52, 199, 89, 0.1);
+  border-color: rgba(52, 199, 89, 0.3);
+}
+
+.valueLabel {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.valueAmount {
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.copyIndicator {
+  font-size: 11px;
+  color: rgba(0, 113, 227, 0.8);
+  height: 14px;
+}
+
+.copied .copyIndicator {
+  color: rgba(52, 199, 89, 0.9);
+}
+
+@media (max-width: 768px) {
+  .copyableValue {
+    min-width: 0;
+    flex: 1;
+  }
+}
+
+/* Warning */
+.warning {
+  padding: 0.75rem 1.25rem;
+  font-size: 13px;
+  color: #f59e0b;
+  line-height: 1.5;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background-color: rgba(245, 158, 11, 0.06);
+}
+
+/* Result card */
+.resultCard {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+}
+
+.resultRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.resultLabel {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.resultHint {
+  display: block;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 2px;
+}
+
+.resultValue {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-family: inherit;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.resultValue:hover {
+  background-color: rgba(0, 113, 227, 0.1);
+  border-color: rgba(0, 113, 227, 0.3);
+}
+
+.resultValue .copyHint {
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(52, 199, 89, 0.9);
+  height: 14px;
 }
 
 .positive {
-  color: #ff9500; /* Orange for amount to pay */
+  color: #ff9500;
 }
 
 .negative {
-  color: #34c759; /* Green for amount to receive */
-}
-
-/* Help Text */
-.helpText {
-  padding: 1.5rem;
-  background-color: rgba(0, 113, 227, 0.1);
-  border: 1px solid rgba(0, 113, 227, 0.2);
-  border-radius: 12px;
-  font-size: 14px;
-  line-height: 1.6;
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.helpText p {
-  margin: 0 0 0.75rem 0;
-}
-
-.helpText p:last-child {
-  margin-bottom: 0;
-}
-
-.transactionCount {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.6);
-  font-style: italic;
+  color: #34c759;
 }
 
 @media (max-width: 768px) {
-  .helpText {
-    padding: 1rem;
-    font-size: 13px;
+  .resultRow {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
   }
+
+  .resultValue {
+    align-items: center;
+    font-size: 20px;
+  }
+}
+
+/* Transaction count */
+.transactionCount {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.4);
+  text-align: center;
+  margin-top: 1.5rem;
 }
 
 /* Empty State */
@@ -245,13 +345,5 @@
 @media (max-width: 768px) {
   .emptyState {
     padding: 3rem 1rem;
-  }
-  
-  .emptyState p {
-    font-size: 14px;
-  }
-  
-  .emptyState small {
-    font-size: 12px;
   }
 }

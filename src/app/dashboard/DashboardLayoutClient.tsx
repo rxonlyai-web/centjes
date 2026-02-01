@@ -11,6 +11,8 @@
  */
 
 import { ReactNode, useState } from 'react'
+import Link from 'next/link'
+import { Settings } from 'lucide-react'
 import Sidebar from '@/components/Sidebar'
 import BottomNavigation from '@/components/BottomNavigation'
 import CameraCapture from '@/components/CameraCapture'
@@ -32,6 +34,9 @@ export default function DashboardLayoutClient({ children }: { children: ReactNod
             <div className={styles.topBarRight}>
               <TaxNotifications />
               <YearSelector />
+              <Link href="/dashboard/instellingen" className={styles.settingsButton} aria-label="Instellingen">
+                <Settings size={20} />
+              </Link>
             </div>
           </div>
           <div className={styles.mainContent}>
