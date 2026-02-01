@@ -25,6 +25,7 @@ import TransactionFilter from '@/components/dashboard/TransactionFilter'
 import TransactionList from '@/components/dashboard/TransactionList'
 import KPIBadge from '@/components/dashboard/KPIBadge'
 import MonthSelector from '@/components/dashboard/MonthSelector'
+import BankImportModal from '@/components/BankImportModal'
 import { getTransactionsWithTotals } from '../actions'
 
 type FilterType = 'ALLES' | 'INKOMSTEN' | 'UITGAVEN'
@@ -45,6 +46,7 @@ interface Transaction {
 export default function TransactiesPage() {
   const { activeYear } = useActiveYear()
   
+  const [showImportModal, setShowImportModal] = useState(false)
   const [panelType, setPanelType] = useState<PanelType>('none')
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null)
   const [activeFilter, setActiveFilter] = useState<FilterType>('ALLES')
@@ -153,12 +155,20 @@ export default function TransactiesPage() {
     <div className={styles.container}>
       <header className={styles.header}>
         <h1 className={styles.title}>Transacties</h1>
-        <button 
-          className={styles.button}
-          onClick={handleNewTransaction}
-        >
-          Nieuwe Transactie
-        </button>
+        <div className={styles.headerButtons}>
+          <button
+            className={styles.importButton}
+            onClick={() => setShowImportModal(true)}
+          >
+            Importeer bank
+          </button>
+          <button
+            className={styles.button}
+            onClick={handleNewTransaction}
+          >
+            Nieuwe Transactie
+          </button>
+        </div>
       </header>
 
       {/* KPI Section: Financial totals and month filter */}
@@ -231,8 +241,8 @@ export default function TransactiesPage() {
       </Drawer>
 
       {/* Transaction Details Drawer */}
-      <Drawer 
-        isOpen={panelType === 'details'} 
+      <Drawer
+        isOpen={panelType === 'details'}
         onClose={handleClosePanel}
         title="Transactie details"
       >
@@ -244,6 +254,14 @@ export default function TransactiesPage() {
           />
         )}
       </Drawer>
+
+      {/* Bank Import Modal */}
+      {showImportModal && (
+        <BankImportModal
+          onClose={() => setShowImportModal(false)}
+          onSuccess={() => { setShowImportModal(false); loadTransactions() }}
+        />
+      )}
     </div>
   )
 }
