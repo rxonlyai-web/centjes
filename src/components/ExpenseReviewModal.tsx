@@ -19,7 +19,7 @@ const CATEGORY_MAP: Record<string, string> = {
 
 function mapCategory(category: string | null): string {
   if (!category) return ''
-  if (['Inkoop', 'Sales', 'Reiskosten', 'Kantoor', 'Overig'].includes(category)) return category
+  if (['Inkoop', 'Reiskosten', 'Kantoor', 'Overig'].includes(category)) return category
   return CATEGORY_MAP[category] || 'Overig'
 }
 
@@ -369,7 +369,6 @@ export default function ExpenseReviewModal({
                 >
                   <option value="">Selecteer een categorie</option>
                   <option value="Inkoop">Inkoop</option>
-                  <option value="Sales">Sales</option>
                   <option value="Reiskosten">Reiskosten</option>
                   <option value="Kantoor">Kantoor</option>
                   <option value="Overig">Overig</option>

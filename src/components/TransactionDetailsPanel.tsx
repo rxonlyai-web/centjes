@@ -469,11 +469,19 @@ export default function TransactionDetailsPanel({
             value={categorie}
             onChange={(e) => setCategorie(e.target.value)}
           >
-            <option value="Inkoop">Inkoop</option>
-            <option value="Sales">Sales</option>
-            <option value="Reiskosten">Reiskosten</option>
-            <option value="Kantoor">Kantoor</option>
-            <option value="Overig">Overig</option>
+            {type === 'INKOMSTEN' ? (
+              <>
+                <option value="Sales">Sales</option>
+                <option value="Overig">Overig</option>
+              </>
+            ) : (
+              <>
+                <option value="Inkoop">Inkoop</option>
+                <option value="Reiskosten">Reiskosten</option>
+                <option value="Kantoor">Kantoor</option>
+                <option value="Overig">Overig</option>
+              </>
+            )}
           </select>
         </div>
       </div>

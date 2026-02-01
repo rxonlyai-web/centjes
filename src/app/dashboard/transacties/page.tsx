@@ -158,15 +158,15 @@ export default function TransactiesPage() {
         <div className={styles.headerButtons}>
           <button
             className={styles.importButton}
-            onClick={() => setShowImportModal(true)}
-          >
-            Importeer bank
-          </button>
-          <button
-            className={styles.button}
             onClick={handleNewTransaction}
           >
             Nieuwe Transactie
+          </button>
+          <button
+            className={styles.button}
+            onClick={() => setShowImportModal(true)}
+          >
+            Importeer bank
           </button>
         </div>
       </header>

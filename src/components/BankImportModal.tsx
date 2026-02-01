@@ -20,7 +20,8 @@ const BANK_NAMES: Record<BankFormat, string> = {
   BUNQ: 'Bunq',
 }
 
-const CATEGORIES = ['Inkoop', 'Sales', 'Reiskosten', 'Kantoor', 'Overig'] as const
+const EXPENSE_CATEGORIES = ['Inkoop', 'Reiskosten', 'Kantoor', 'Overig'] as const
+const INCOME_CATEGORIES = ['Sales', 'Overig'] as const
 
 interface ReviewRow extends CategorizedTransaction {
   selected: boolean
@@ -251,7 +252,7 @@ export default function BankImportModal({ onClose, onSuccess }: BankImportModalP
                       onChange={e => updateCategory(row.index, e.target.value)}
                       disabled={row.isDuplicate}
                     >
-                      {CATEGORIES.map(c => (
+                      {(row.type_transactie === 'INKOMSTEN' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).map(c => (
                         <option key={c} value={c}>{c}</option>
                       ))}
                     </select>

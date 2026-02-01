@@ -179,18 +179,18 @@ async function categorizeWithGemini(
     const prompt = `Je bent een Nederlandse boekhoudasssistent. Categoriseer deze banktransacties voor een ZZP'er.
 
 Per transactie, bepaal:
-1. categorie: een van "Inkoop", "Sales", "Reiskosten", "Kantoor", "Overig"
+1. categorie: afhankelijk van type (zie regels)
 2. btw_tarief: 21, 9, of 0
 3. confidence: "high" of "low"
 
 Regels:
-- "Sales" = inkomsten van klanten
+- Als type INKOMSTEN is: categorie is "Sales" of "Overig", en btw_tarief 21
+- Als type UITGAVEN is: categorie is een van "Inkoop", "Reiskosten", "Kantoor", "Overig" (NOOIT "Sales")
 - "Inkoop" = inkoop van goederen voor doorverkoop
 - "Reiskosten" = NS, OV, parkeren, brandstof, hotels, vluchten, taxi
 - "Kantoor" = kantoorspullen, software abonnementen, internet, telefoon
 - "Overig" = al het andere (bankkosten, verzekeringen, maaltijden, etc.)
 - btw_tarief: 21 voor de meeste uitgaven, 9 voor eten/boeken/medicijnen, 0 voor bankkosten/verzekeringen
-- Als type INKOMSTEN is, gebruik categorie "Sales" en btw_tarief 21
 
 Geef ALLEEN een JSON array terug:
 [{"index": 0, "categorie": "...", "btw_tarief": 21, "confidence": "high"}, ...]

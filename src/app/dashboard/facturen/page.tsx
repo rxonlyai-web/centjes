@@ -8,7 +8,7 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Plus, Search, Eye, Trash2, FileText, Bot, Edit3, X } from 'lucide-react'
+import { Plus, Search, Eye, Trash2, FileText } from 'lucide-react'
 import { getInvoices, updateInvoiceStatus, deleteInvoice, type Invoice } from './actions'
 import styles from './page.module.css'
 
@@ -21,7 +21,6 @@ function FacturenPageContent() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'sent' | 'paid'>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [error, setError] = useState('')
-  const [showCreateModal, setShowCreateModal] = useState(false)
 
   // Load invoices
   useEffect(() => {
@@ -116,34 +115,13 @@ function FacturenPageContent() {
       <header className={styles.header}>
         <div className={styles.headerTop}>
           <h1 className={styles.title}>Facturen</h1>
-          <div className={styles.newInvoiceContainer}>
-            <button
-              onClick={() => setShowCreateModal(!showCreateModal)}
-              className={styles.newInvoiceButton}
-            >
-              <Plus size={20} />
-              Nieuwe factuur
-            </button>
-            
-            {showCreateModal && (
-              <div className={styles.dropdown}>
-                <button
-                  onClick={() => router.push('/dashboard/facturen/nieuw')}
-                  className={styles.dropdownItem}
-                >
-                  <Bot size={18} />
-                  AI Assistent
-                </button>
-                <button
-                  onClick={() => router.push('/dashboard/facturen/handmatig')}
-                  className={styles.dropdownItem}
-                >
-                  <Edit3 size={18} />
-                  Handmatig invullen
-                </button>
-              </div>
-            )}
-          </div>
+          <button
+            onClick={() => router.push('/dashboard/facturen/handmatig')}
+            className={styles.newInvoiceButton}
+          >
+            <Plus size={20} />
+            Nieuwe factuur
+          </button>
         </div>
         <p className={styles.subtitle}>
           Beheer al je facturen op één plek
@@ -202,11 +180,11 @@ function FacturenPageContent() {
           <p className={styles.emptyText}>
             {searchQuery || statusFilter !== 'all'
               ? 'Probeer een andere zoekopdracht of filter'
-              : 'Klik op "Nieuwe factuur" om je eerste factuur aan te maken met de AI-assistent!'}
+              : 'Klik op "Nieuwe factuur" om je eerste factuur aan te maken!'}
           </p>
           {!searchQuery && statusFilter === 'all' && (
             <button
-              onClick={() => router.push('/dashboard/facturen/nieuw')}
+              onClick={() => router.push('/dashboard/facturen/handmatig')}
               className={styles.emptyButton}
             >
               <Plus size={20} />
