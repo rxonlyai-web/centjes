@@ -38,7 +38,7 @@ export default function DashboardLayoutClient({ children }: { children: ReactNod
             {children}
           </div>
         </div>
-        <BottomNavigation onCameraClick={() => setShowCamera(true)} />
+        <BottomNavigation onCameraClick={() => setShowCamera(true)} onNavigate={() => setShowCamera(false)} />
         {showCamera && <CameraCapture onClose={() => setShowCamera(false)} />}
       </div>
     </YearProvider>

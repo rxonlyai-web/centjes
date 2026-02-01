@@ -7,9 +7,10 @@ import styles from './BottomNavigation.module.css'
 
 interface BottomNavigationProps {
   onCameraClick: () => void
+  onNavigate?: () => void
 }
 
-export default function BottomNavigation({ onCameraClick }: BottomNavigationProps) {
+export default function BottomNavigation({ onCameraClick, onNavigate }: BottomNavigationProps) {
   const pathname = usePathname()
 
   const navItems = [
@@ -43,6 +44,7 @@ export default function BottomNavigation({ onCameraClick }: BottomNavigationProp
           <Link
             key={item.href}
             href={item.href}
+            onClick={onNavigate}
             className={`${styles.navItem} ${isActive ? styles.active : ''}`}
           >
             <Icon size={24} />

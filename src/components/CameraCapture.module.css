@@ -196,11 +196,11 @@
   }
 }
 
-/* Full screen on mobile */
+/* Full screen on mobile, but leave bottom nav visible */
 @media (max-width: 768px) {
   .overlay {
     padding: 0;
-    padding-bottom: var(--safe-area-bottom, 0px);
+    bottom: calc(var(--bottom-nav-height, 60px) + var(--safe-area-bottom, 0px));
   }
 
   .modal {
