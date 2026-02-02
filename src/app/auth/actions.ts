@@ -68,24 +68,50 @@ async function getRequestOrigin(): Promise<string> {
 
 export async function signInWithGoogle() {
   const supabase = await createClient()
-  
+
   const origin = await getRequestOrigin()
   const redirectTo = `${origin}/auth/callback`
-  
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
       redirectTo,
     },
   })
-  
+
   if (error) {
     redirect('/login?error=Could not authenticate with Google')
   }
-  
+
   if (data.url) {
     redirect(data.url)
   }
-  
+
   redirect('/login?error=No redirect URL received from Supabase')
+}
+
+/**
+ * Returns the Google OAuth URL without performing a redirect.
+ * Used by the native app to open OAuth in SFSafariViewController
+ * instead of an embedded WebView (which Google blocks).
+ */
+export async function getGoogleOAuthUrl(): Promise<{ url: string | null; error: string | null }> {
+  const supabase = await createClient()
+
+  const origin = await getRequestOrigin()
+  const redirectTo = `${origin}/auth/callback?native=true`
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo,
+      skipBrowserRedirect: true,
+    },
+  })
+
+  if (error) {
+    return { url: null, error: 'Could not authenticate with Google' }
+  }
+
+  return { url: data.url, error: null }
 }

@@ -11,17 +11,23 @@ export async function GET(request: Request) {
   console.log('[Callback] Origin:', origin)
   console.log('[Callback] Next:', next)
 
+  const isNative = searchParams.get('native') === 'true'
+
   if (code) {
     const supabase = await createClient()
     console.log('[Callback] Exchanging code for session...')
-    
+
     const { error } = await supabase.auth.exchangeCodeForSession(code)
-    
+
     if (!error) {
+      if (isNative) {
+        console.log('[Callback] Native app callback, redirecting to centjes:// scheme')
+        return NextResponse.redirect('centjes://callback')
+      }
       console.log('[Callback] Code exchange successful, redirecting to:', `${origin}${next}`)
       return NextResponse.redirect(`${origin}${next}`)
     }
-    
+
     console.error('[Callback] Code exchange error:', error)
   }
 

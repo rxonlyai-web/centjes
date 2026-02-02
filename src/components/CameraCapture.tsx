@@ -1,10 +1,23 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { X, Upload, Camera, Loader2 } from 'lucide-react'
 import { createExpenseFromCamera } from '@/app/dashboard/uitgaven/actions'
+import { isNativeApp } from '@/utils/capacitor'
 import styles from './CameraCapture.module.css'
+
+function base64ToFile(base64: string, filename: string): File {
+  const arr = base64.split(',')
+  const mimeMatch = arr[0].match(/:(.*?);/)
+  const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg'
+  const bstr = atob(arr[1])
+  const u8arr = new Uint8Array(bstr.length)
+  for (let i = 0; i < bstr.length; i++) {
+    u8arr[i] = bstr.charCodeAt(i)
+  }
+  return new File([u8arr], filename, { type: mime })
+}
 
 interface CameraCaptureProps {
   onClose: () => void
@@ -17,6 +30,29 @@ export default function CameraCapture({ onClose }: CameraCaptureProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const handleNativeCamera = useCallback(async () => {
+    try {
+      const { Camera: CapCamera, CameraResultType, CameraSource } = await import('@capacitor/camera')
+      const photo = await CapCamera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Prompt,
+      })
+
+      if (photo.dataUrl) {
+        setPreview(photo.dataUrl)
+        const file = base64ToFile(photo.dataUrl, `bon-${Date.now()}.jpg`)
+        setSelectedFile(file)
+        setError(null)
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('cancelled')) return
+      console.error('Native camera error:', err)
+      setError('Camera kon niet geopend worden')
+    }
+  }, [])
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -76,7 +112,11 @@ export default function CameraCapture({ onClose }: CameraCaptureProps) {
     setPreview(null)
     setSelectedFile(null)
     setError(null)
-    fileInputRef.current?.click()
+    if (isNativeApp()) {
+      handleNativeCamera()
+    } else {
+      fileInputRef.current?.click()
+    }
   }
 
   return (
@@ -92,16 +132,18 @@ export default function CameraCapture({ onClose }: CameraCaptureProps) {
         <div className={styles.content}>
           {!preview ? (
             <div className={styles.captureArea}>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handleFileChange}
-                className={styles.fileInput}
-              />
+              {!isNativeApp() && (
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleFileChange}
+                  className={styles.fileInput}
+                />
+              )}
               <button
-                onClick={() => fileInputRef.current?.click()}
+                onClick={isNativeApp() ? handleNativeCamera : () => fileInputRef.current?.click()}
                 className={styles.captureButton}
               >
                 <Camera size={48} />
