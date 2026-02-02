@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import NativeAppListener from "@/components/NativeAppListener";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -36,6 +37,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable}`}
         style={{ minHeight: "100vh" }}
       >
+        <NativeAppListener />
         {children}
       </body>
     </html>
