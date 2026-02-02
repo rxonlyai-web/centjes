@@ -16,7 +16,15 @@ export default function NativeAppListener() {
       const listener = await App.addListener('appUrlOpen', async (event) => {
         if (event.url.startsWith('centjes://callback')) {
           await Browser.close()
-          window.location.href = '/dashboard'
+
+          const url = new URL(event.url.replace('centjes://', 'https://centjes.eu/'))
+          const refreshToken = url.searchParams.get('refresh_token')
+
+          if (refreshToken) {
+            window.location.href = `/auth/native-session?refresh_token=${encodeURIComponent(refreshToken)}`
+          } else {
+            window.location.href = '/dashboard'
+          }
         }
       })
 

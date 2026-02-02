@@ -17,12 +17,13 @@ export async function GET(request: Request) {
     const supabase = await createClient()
     console.log('[Callback] Exchanging code for session...')
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error) {
-      if (isNative) {
-        console.log('[Callback] Native app callback, redirecting to centjes:// scheme')
-        return NextResponse.redirect('centjes://callback')
+      if (isNative && data.session) {
+        console.log('[Callback] Native app callback, redirecting to centjes:// scheme with token')
+        const refreshToken = encodeURIComponent(data.session.refresh_token)
+        return NextResponse.redirect(`centjes://callback?refresh_token=${refreshToken}`)
       }
       console.log('[Callback] Code exchange successful, redirecting to:', `${origin}${next}`)
       return NextResponse.redirect(`${origin}${next}`)
