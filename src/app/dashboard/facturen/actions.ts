@@ -5,6 +5,7 @@
  */
 
 import { createClient } from '@/utils/supabase/server'
+import { getUserOrganizationId } from '@/lib/org'
 
 export interface InvoiceItem {
   description: string
@@ -94,10 +95,12 @@ export async function getInvoices(filters?: InvoiceFilters): Promise<Invoice[]> 
     throw new Error('User not authenticated')
   }
 
+  const orgId = await getUserOrganizationId(supabase)
+
   let query = supabase
     .from('invoices')
     .select('id, invoice_number, status, client_name, client_email, invoice_date, total_amount, created_at, updated_at')
-    .eq('user_id', user.id)
+    .eq(orgId ? 'organization_id' : 'user_id', orgId || user.id)
     .order('created_at', { ascending: false })
 
   // Apply status filter
@@ -132,12 +135,14 @@ export async function getInvoiceById(invoiceId: string): Promise<InvoiceWithItem
     throw new Error('User not authenticated')
   }
 
+  const orgId = await getUserOrganizationId(supabase)
+
   // Get invoice
   const { data: invoice, error: invoiceError } = await supabase
     .from('invoices')
     .select('id, invoice_number, status, client_name, client_email, client_address, client_kvk, client_btw, invoice_date, due_date, payment_terms, subtotal, vat_rate, vat_amount, total_amount, notes, created_at, updated_at')
     .eq('id', invoiceId)
-    .eq('user_id', user.id)
+    .eq(orgId ? 'organization_id' : 'user_id', orgId || user.id)
     .single()
 
   if (invoiceError || !invoice) {
@@ -161,7 +166,7 @@ export async function getInvoiceById(invoiceId: string): Promise<InvoiceWithItem
   const { data: companySettings } = await supabase
     .from('company_settings')
     .select('company_name, kvk_number, btw_number, address_line1, address_line2, postal_code, city, country, email, phone, bank_account')
-    .eq('user_id', user.id)
+    .eq(orgId ? 'organization_id' : 'user_id', orgId || user.id)
     .single()
 
   return {
@@ -185,6 +190,8 @@ export async function updateInvoiceStatus(
     throw new Error('User not authenticated')
   }
 
+  const orgId = await getUserOrganizationId(supabase)
+
   const { error } = await supabase
     .from('invoices')
     .update({
@@ -192,7 +199,7 @@ export async function updateInvoiceStatus(
       updated_at: new Date().toISOString()
     })
     .eq('id', invoiceId)
-    .eq('user_id', user.id)
+    .eq(orgId ? 'organization_id' : 'user_id', orgId || user.id)
 
   if (error) {
     console.error('Error updating invoice status:', error)
@@ -211,11 +218,13 @@ export async function deleteInvoice(invoiceId: string): Promise<void> {
     throw new Error('User not authenticated')
   }
 
+  const orgId = await getUserOrganizationId(supabase)
+
   const { error } = await supabase
     .from('invoices')
     .delete()
     .eq('id', invoiceId)
-    .eq('user_id', user.id)
+    .eq(orgId ? 'organization_id' : 'user_id', orgId || user.id)
 
   if (error) {
     console.error('Error deleting invoice:', error)
@@ -249,6 +258,8 @@ export async function updateInvoice(
     throw new Error('User not authenticated')
   }
 
+  const orgId = await getUserOrganizationId(supabase)
+
   // Update invoice basic info
   const invoiceUpdates: Record<string, unknown> = {
     updated_at: new Date().toISOString()
@@ -275,7 +286,7 @@ export async function updateInvoice(
     .from('invoices')
     .update(invoiceUpdates)
     .eq('id', invoiceId)
-    .eq('user_id', user.id)
+    .eq(orgId ? 'organization_id' : 'user_id', orgId || user.id)
 
   if (updateError) {
     console.error('Error updating invoice:', updateError)
@@ -322,6 +333,8 @@ export async function createEmptyInvoice(): Promise<string> {
     throw new Error('User not authenticated')
   }
 
+  const orgId = await getUserOrganizationId(supabase)
+
   // Generate invoice number
   const { data: invoiceNumber, error: numberError } = await supabase
     .rpc('generate_invoice_number', { p_user_id: user.id })
@@ -341,6 +354,7 @@ export async function createEmptyInvoice(): Promise<string> {
     .from('invoices')
     .insert({
       user_id: user.id,
+      ...(orgId && { organization_id: orgId }),
       invoice_number: invoiceNumber,
       status: 'draft',
       client_name: '',

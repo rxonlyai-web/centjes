@@ -58,8 +58,12 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Redirect to login if not authenticated and trying to access dashboard
+  // Redirect to login if not authenticated and trying to access dashboard or onboarding
   if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
+
+  if (!user && request.nextUrl.pathname.startsWith('/onboarding')) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
@@ -68,9 +72,23 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
+  // Check onboarding status for dashboard routes
+  if (user && request.nextUrl.pathname.startsWith('/dashboard')) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('onboarding_completed')
+      .eq('id', user.id)
+      .single()
+
+    // If no profile or onboarding not completed, redirect to onboarding
+    if (!profile || !profile.onboarding_completed) {
+      return NextResponse.redirect(new URL('/onboarding', request.url))
+    }
+  }
+
   return response
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/login', '/register'],
+  matcher: ['/dashboard/:path*', '/login', '/register', '/onboarding/:path*', '/invite/:path*'],
 }

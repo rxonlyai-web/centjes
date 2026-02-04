@@ -4,23 +4,25 @@
   background-color: #0f1117;
 }
 
+/* Mobile-first: no sidebar margin */
 .content {
   flex: 1;
-  margin-left: 280px;
   width: 100%;
   display: flex;
   flex-direction: column;
+  padding-bottom: calc(var(--bottom-nav-height, 60px) + var(--safe-area-bottom, 0px));
 }
 
-/* Top bar for global year selector */
+/* Top bar — mobile-first */
 .topBar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem 2rem;
+  padding: 0.75rem 1rem;
+  padding-top: calc(0.75rem + var(--safe-area-top, 0px));
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   background-color: rgba(255, 255, 255, 0.01);
-  min-height: 60px;
+  min-height: 56px;
 }
 
 .topBarLeft {
@@ -33,37 +35,21 @@
   gap: 1rem;
 }
 
-/* Settings button in top bar */
-.settingsButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  color: rgba(255, 255, 255, 0.5);
-  transition: color 0.2s, background-color 0.2s;
-  text-decoration: none;
-}
-
-.settingsButton:hover {
-  color: rgba(255, 255, 255, 0.9);
-  background-color: rgba(255, 255, 255, 0.06);
-}
-
 /* Main content area (pages render here) */
 .mainContent {
   flex: 1;
 }
 
-@media (max-width: 768px) {
+/* Desktop enhancements */
+@media (min-width: 769px) {
   .content {
-    margin-left: 0;
-    padding-bottom: calc(var(--bottom-nav-height, 60px) + var(--safe-area-bottom, 0px));
+    margin-left: 280px;
+    padding-bottom: 0;
   }
 
   .topBar {
-    padding: 1rem;
-    min-height: 50px;
+    padding: 1.5rem 2rem;
+    padding-top: 1.5rem;
+    min-height: 60px;
   }
 }

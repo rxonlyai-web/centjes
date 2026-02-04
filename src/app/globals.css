@@ -7,6 +7,42 @@
   /* Mobile navigation */
   --bottom-nav-height: 60px;
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* Touch targets */
+  --touch-target-min: 44px;
+
+  /* Buttons */
+  --btn-padding: 0.75rem 1.25rem;
+  --btn-radius: 8px;
+  --btn-font-weight: 600;
+  --btn-font-size: 1rem;
+  --btn-min-height: var(--touch-target-min);
+
+  /* Inputs — 16px minimum to prevent iOS zoom */
+  --input-font-size: 1rem;
+  --input-bg: rgba(255, 255, 255, 0.05);
+  --input-border: rgba(255, 255, 255, 0.1);
+  --input-radius: 8px;
+  --input-padding: 0.75rem 1rem;
+  --input-min-height: var(--touch-target-min);
+
+  /* Cards */
+  --card-bg: rgba(255, 255, 255, 0.03);
+  --card-border: rgba(255, 255, 255, 0.08);
+  --card-radius: 12px;
+  --card-padding: 1rem;
+
+  /* Safe areas */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* Spacing scale */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
 }
 
 /* Light mode (fallback - not used by default) */
@@ -105,5 +141,5 @@ button {
 
 input, select, textarea {
   font-family: inherit;
-  font-size: 1rem;
+  font-size: var(--input-font-size) !important;
 }

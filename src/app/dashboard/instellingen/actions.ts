@@ -6,6 +6,7 @@
  */
 
 import { createClient } from '@/utils/supabase/server'
+import { getUserOrganizationId } from '@/lib/org'
 
 export interface CompanySettings {
   id: string
@@ -52,11 +53,19 @@ export async function getCompanySettings(): Promise<CompanySettings | null> {
     throw new Error('User not authenticated')
   }
 
-  const { data, error } = await supabase
+  const orgId = await getUserOrganizationId(supabase)
+
+  let query = supabase
     .from('company_settings')
     .select('*')
-    .eq('user_id', user.id)
-    .single()
+
+  if (orgId) {
+    query = query.eq('organization_id', orgId)
+  } else {
+    query = query.eq('user_id', user.id)
+  }
+
+  const { data, error } = await query.single()
 
   if (error) {
     // If no settings exist yet, return null (not an error)
@@ -95,18 +104,27 @@ export async function updateCompanySettings(
     throw new Error('User not authenticated')
   }
 
+  const orgId = await getUserOrganizationId(supabase)
+
   // Check if settings already exist
   const existing = await getCompanySettings()
 
   if (existing) {
     // Update existing settings
-    const { data, error } = await supabase
+    let updateQuery = supabase
       .from('company_settings')
       .update({
         ...input,
         updated_at: new Date().toISOString(),
       })
-      .eq('user_id', user.id)
+
+    if (orgId) {
+      updateQuery = updateQuery.eq('organization_id', orgId)
+    } else {
+      updateQuery = updateQuery.eq('user_id', user.id)
+    }
+
+    const { data, error } = await updateQuery
       .select()
       .single()
 
@@ -124,6 +142,7 @@ export async function updateCompanySettings(
         user_id: user.id,
         ...input,
         country: input.country || 'Nederland',
+        ...(orgId && { organization_id: orgId }),
       })
       .select()
       .single()

@@ -7,17 +7,17 @@
  * - YearProvider: Global year context for year-based filtering
  * - Sidebar: Main navigation (desktop)
  * - BottomNavigation: Mobile navigation
- * - Top bar: Contains global year selector
+ * - Top bar: Year selector + UserMenu avatar
  */
 
 import { ReactNode, useState } from 'react'
-import Link from 'next/link'
-import { Settings } from 'lucide-react'
 import Sidebar from '@/components/Sidebar'
 import BottomNavigation from '@/components/BottomNavigation'
 import CameraCapture from '@/components/CameraCapture'
 import YearSelector from '@/components/YearSelector'
-import TaxNotifications from '@/components/TaxNotifications'
+import UserMenu from '@/components/UserMenu'
+import PWAInstallBanner from '@/components/PWAInstallBanner'
+import PWAInstallPrompt from '@/components/PWAInstallPrompt'
 import { YearProvider } from '@/contexts/YearContext'
 import styles from './DashboardLayoutClient.module.css'
 
@@ -30,15 +30,15 @@ export default function DashboardLayoutClient({ children }: { children: ReactNod
         <Sidebar />
         <div className={styles.content}>
           <div className={styles.topBar}>
-            <div className={styles.topBarLeft}></div>
-            <div className={styles.topBarRight}>
-              <TaxNotifications />
+            <div className={styles.topBarLeft}>
               <YearSelector />
-              <Link href="/dashboard/instellingen" className={styles.settingsButton} aria-label="Instellingen">
-                <Settings size={20} />
-              </Link>
+            </div>
+            <div className={styles.topBarRight}>
+              <UserMenu />
             </div>
           </div>
+          <PWAInstallBanner />
+          <PWAInstallPrompt />
           <div className={styles.mainContent}>
             {children}
           </div>

@@ -11,9 +11,11 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Check, Edit2, Save, X, MessageCircle } from 'lucide-react'
+import { Check, Edit2, Save, X, MessageCircle, Users, Link as LinkIcon } from 'lucide-react'
 import { getCompanySettings, updateCompanySettings, type CompanySettingsInput } from './actions'
 import GmailIntegration from '@/components/GmailIntegration'
+import { createClient } from '@/utils/supabase/client'
+import { createInviteLink } from '@/app/onboarding/actions'
 import styles from './page.module.css'
 
 export default function InstellingenPage() {
@@ -24,6 +26,14 @@ export default function InstellingenPage() {
   const [success, setSuccess] = useState(false)
   
   // Store original values for cancel
+  // Team state
+  const [teamMembers, setTeamMembers] = useState<Array<{ user_id: string; role: string; email?: string }>>([])
+  const [orgId, setOrgId] = useState<string | null>(null)
+  const [businessType, setBusinessType] = useState<string | null>(null)
+  const [inviteUrl, setInviteUrl] = useState('')
+  const [inviteCopied, setInviteCopied] = useState(false)
+  const supabase = createClient()
+
   const [originalSettings, setOriginalSettings] = useState<CompanySettingsInput>({
     company_name: '',
     kvk_number: '',
@@ -54,7 +64,71 @@ export default function InstellingenPage() {
 
   useEffect(() => {
     loadSettings()
+    loadTeam()
   }, [])
+
+  const loadTeam = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      // Get user's org
+      const { data: membership } = await supabase
+        .from('organization_members')
+        .select('organization_id, role')
+        .eq('user_id', user.id)
+        .single()
+
+      if (!membership) return
+
+      setOrgId(membership.organization_id)
+
+      // Get org type
+      const { data: org } = await supabase
+        .from('organizations')
+        .select('business_type')
+        .eq('id', membership.organization_id)
+        .single()
+
+      if (org) setBusinessType(org.business_type)
+
+      // Get all members
+      const { data: members } = await supabase
+        .from('organization_members')
+        .select('user_id, role')
+        .eq('organization_id', membership.organization_id)
+
+      if (members) setTeamMembers(members)
+    } catch (err) {
+      console.error('Failed to load team:', err)
+    }
+  }
+
+  async function handleInvite() {
+    if (!orgId) return
+    try {
+      const url = await createInviteLink(orgId)
+      setInviteUrl(url)
+    } catch (err: any) {
+      setError(err.message || 'Kon uitnodiging niet aanmaken')
+    }
+  }
+
+  async function handleCopyInvite() {
+    try {
+      await navigator.clipboard.writeText(inviteUrl)
+      setInviteCopied(true)
+      setTimeout(() => setInviteCopied(false), 2000)
+    } catch {
+      setInviteCopied(true)
+      setTimeout(() => setInviteCopied(false), 2000)
+    }
+  }
+
+  function handleWhatsAppInvite() {
+    const message = `Hoi! Ik gebruik Centjes voor onze boekhouding. Doe je mee?\n\n${inviteUrl}`
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank')
+  }
 
   const loadSettings = async () => {
     setLoading(true)
@@ -433,6 +507,64 @@ export default function InstellingenPage() {
         <section className={styles.section}>
           <GmailIntegration />
         </section>
+
+        {/* Team Section (VOF only) */}
+        {businessType === 'vof' && (
+          <section className={styles.section}>
+            <div className={styles.sectionHeader}>
+              <h2 className={styles.sectionTitle}>Team</h2>
+            </div>
+
+            <div className={styles.teamMembers}>
+              {teamMembers.map((member) => (
+                <div key={member.user_id} className={styles.memberCard}>
+                  <div className={styles.memberAvatar}>
+                    {(member.email || '?')[0].toUpperCase()}
+                  </div>
+                  <div className={styles.memberInfo}>
+                    <span className={styles.memberEmail}>{member.email || member.user_id}</span>
+                    <span className={styles.memberRole}>
+                      {member.role === 'owner' ? 'Eigenaar' : 'Lid'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {!inviteUrl ? (
+              <button
+                onClick={handleInvite}
+                className={styles.inviteButton}
+                type="button"
+              >
+                <Users size={20} />
+                Nodig vennoot uit
+              </button>
+            ) : (
+              <div className={styles.inviteActions}>
+                <div className={styles.inviteLinkBox}>
+                  <LinkIcon size={16} />
+                  <span className={styles.inviteLinkText}>{inviteUrl}</span>
+                  <button
+                    onClick={handleCopyInvite}
+                    className={styles.copyButton}
+                    type="button"
+                  >
+                    {inviteCopied ? 'Gekopieerd!' : 'Kopieer'}
+                  </button>
+                </div>
+                <button
+                  onClick={handleWhatsAppInvite}
+                  className={styles.whatsappButton}
+                  type="button"
+                >
+                  <MessageCircle size={20} />
+                  Deel via WhatsApp
+                </button>
+              </div>
+            )}
+          </section>
+        )}
 
       </form>
     </div>

@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { extractExpenseData, validateExpenseData, type ExpenseData } from '@/lib/ocr/expense-ocr'
+import { getUserOrganizationId } from '@/lib/org'
 
 /**
  * Create a pending expense from a camera capture
@@ -17,6 +18,8 @@ export async function createExpenseFromCamera(formData: FormData): Promise<{
   if (userError || !user) {
     return { success: false, error: 'Niet ingelogd' }
   }
+
+  const orgId = await getUserOrganizationId(supabase)
 
   const file = formData.get('file') as File | null
   if (!file) {
@@ -77,7 +80,8 @@ export async function createExpenseFromCamera(formData: FormData): Promise<{
         pdf_filename: filename,
         pdf_size_bytes: file.size,
         ocr_status: 'pending',
-        status: 'pending'
+        status: 'pending',
+        ...(orgId && { organization_id: orgId }),
       })
       .select('id')
       .single()
@@ -138,10 +142,19 @@ export async function getPendingExpenses(): Promise<PendingExpense[]> {
     return []
   }
 
-  const { data, error } = await supabase
+  const orgId = await getUserOrganizationId(supabase)
+
+  let query = supabase
     .from('pending_expenses')
     .select('id, sender_email, subject, received_at, pdf_url, pdf_filename, pdf_size_bytes, ocr_status, ocr_completed_at, vendor_name, vendor_country, invoice_number, invoice_date, due_date, currency, subtotal, vat_rate, vat_amount, total_amount, total_amount_eur, exchange_rate, description, category, vat_treatment, eu_location, ocr_error, status, created_at')
-    .eq('user_id', user.id)
+
+  if (orgId) {
+    query = query.eq('organization_id', orgId)
+  } else {
+    query = query.eq('user_id', user.id)
+  }
+
+  const { data, error } = await query
     .eq('status', 'pending')
     .order('created_at', { ascending: false })
 
@@ -158,18 +171,26 @@ export async function getPendingExpenses(): Promise<PendingExpense[]> {
  */
 export async function getPendingExpense(expenseId: string): Promise<PendingExpense | null> {
   const supabase = await createClient()
-  
+
   const { data: { user }, error: userError } = await supabase.auth.getUser()
   if (userError || !user) {
     throw new Error('Not authenticated')
   }
 
-  const { data, error } = await supabase
+  const orgId = await getUserOrganizationId(supabase)
+
+  let query = supabase
     .from('pending_expenses')
     .select('id, sender_email, subject, received_at, pdf_url, pdf_filename, pdf_size_bytes, ocr_status, ocr_completed_at, vendor_name, vendor_country, invoice_number, invoice_date, due_date, currency, subtotal, vat_rate, vat_amount, total_amount, total_amount_eur, exchange_rate, description, category, vat_treatment, eu_location, ocr_error, status, created_at')
     .eq('id', expenseId)
-    .eq('user_id', user.id)
-    .single()
+
+  if (orgId) {
+    query = query.eq('organization_id', orgId)
+  } else {
+    query = query.eq('user_id', user.id)
+  }
+
+  const { data, error } = await query.single()
 
   if (error) {
     console.error('Error fetching expense:', error)
@@ -296,6 +317,8 @@ export async function approveExpense(
     throw new Error('Not authenticated')
   }
 
+  const orgId = await getUserOrganizationId(supabase)
+
   // Get expense
   const expense = await getPendingExpense(expenseId)
   if (!expense) {
@@ -338,7 +361,8 @@ export async function approveExpense(
       btw_tarief: finalData.vat_rate,
       vat_treatment: finalData.vat_treatment,
       type_transactie: 'UITGAVEN',
-      bon_url: expense.pdf_url
+      bon_url: expense.pdf_url,
+      ...(orgId && { organization_id: orgId }),
     }
 
     // Only add eu_location if reverse charge

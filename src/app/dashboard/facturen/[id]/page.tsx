@@ -2,14 +2,17 @@
 
 /**
  * Invoice Detail Page with Edit Functionality
- * 
- * Shows full invoice details with inline editing capabilities
+ *
+ * Shows full invoice details with inline editing capabilities.
+ * Mobile: stacked card layout for line items, sticky action bar.
+ * Desktop: table layout for line items.
  */
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
-import { ArrowLeft, Download, Edit2, Save, X, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Download, Edit2, Save, X, Plus, Trash2, Mail } from 'lucide-react'
 import { getInvoiceById, updateInvoiceStatus, updateInvoice, generateInvoicePDF, type InvoiceWithItems } from '../actions'
+import SendInvoiceModal from '@/components/SendInvoiceModal'
 import styles from './page.module.css'
 
 interface EditableItem {
@@ -25,13 +28,14 @@ export default function InvoiceDetailPage() {
   const params = useParams()
   const searchParams = useSearchParams()
   const invoiceId = params.id as string
-  
+
   const [invoice, setInvoice] = useState<InvoiceWithItems | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [updatingStatus, setUpdatingStatus] = useState(false)
   const [downloadingPDF, setDownloadingPDF] = useState(false)
-  
+  const [showSendModal, setShowSendModal] = useState(false)
+
   // Edit mode state
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -49,7 +53,6 @@ export default function InvoiceDetailPage() {
   useEffect(() => {
     if (searchParams.get('edit') === 'true' && invoice && !loading) {
       setIsEditing(true)
-      // Remove the query param from URL
       const url = new URL(window.location.href)
       url.searchParams.delete('edit')
       window.history.replaceState({}, '', url.pathname)
@@ -65,7 +68,6 @@ export default function InvoiceDetailPage() {
         setError('Factuur niet gevonden')
       } else {
         setInvoice(data)
-        // Initialize edit state
         setEditedClientName(data.client_name)
         setEditedClientEmail(data.client_email || '')
         setEditedClientAddress(data.client_address || '')
@@ -88,7 +90,7 @@ export default function InvoiceDetailPage() {
 
   async function handleStatusChange(newStatus: 'draft' | 'sent' | 'paid') {
     if (!invoice) return
-    
+
     try {
       setUpdatingStatus(true)
       await updateInvoiceStatus(invoice.id, newStatus)
@@ -107,7 +109,6 @@ export default function InvoiceDetailPage() {
 
   function cancelEditing() {
     if (!invoice) return
-    // Reset to original values
     setEditedClientName(invoice.client_name)
     setEditedClientEmail(invoice.client_email || '')
     setEditedClientAddress(invoice.client_address || '')
@@ -127,7 +128,7 @@ export default function InvoiceDetailPage() {
 
     try {
       setIsSaving(true)
-      
+
       await updateInvoice(invoice.id, {
         client_name: editedClientName,
         client_email: editedClientEmail || undefined,
@@ -136,7 +137,6 @@ export default function InvoiceDetailPage() {
         items: editedItems
       })
 
-      // Reload invoice
       await loadInvoice()
       setIsEditing(false)
     } catch (err) {
@@ -150,12 +150,11 @@ export default function InvoiceDetailPage() {
   function updateItemField(index: number, field: keyof EditableItem, value: string | number) {
     const newItems = [...editedItems]
     newItems[index] = { ...newItems[index], [field]: value }
-    
-    // Recalculate total_price if quantity or unit_price changed
+
     if (field === 'quantity' || field === 'unit_price') {
       newItems[index].total_price = newItems[index].quantity * newItems[index].unit_price
     }
-    
+
     setEditedItems(newItems)
   }
 
@@ -185,8 +184,7 @@ export default function InvoiceDetailPage() {
     try {
       setDownloadingPDF(true)
       const pdfDataUrl = await generateInvoicePDF(invoice.id)
-      
-      // Create download link
+
       const link = document.createElement('a')
       link.href = pdfDataUrl
       link.download = `Factuur-${invoice.invoice_number}.pdf`
@@ -212,10 +210,10 @@ export default function InvoiceDetailPage() {
 
   function formatDate(dateString: string) {
     const date = new Date(dateString)
-    return date.toLocaleDateString('nl-NL', { 
-      day: 'numeric', 
-      month: 'long', 
-      year: 'numeric' 
+    return date.toLocaleDateString('nl-NL', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
     })
   }
 
@@ -261,50 +259,49 @@ export default function InvoiceDetailPage() {
       <header className={styles.header}>
         <button onClick={() => router.push('/dashboard/facturen')} className={styles.backButton}>
           <ArrowLeft size={20} />
-          Terug
+          <span className={styles.backLabel}>Terug</span>
         </button>
-        
-        <div className={styles.headerActions}>
-          {!isEditing ? (
-            <>
-              <button onClick={startEditing} className={styles.editButton}>
-                <Edit2 size={20} />
-                Bewerken
-              </button>
-              
-              <select
-                value={invoice.status}
-                onChange={(e) => handleStatusChange(e.target.value as 'draft' | 'sent' | 'paid')}
-                disabled={updatingStatus}
-                className={`${styles.statusSelect} ${getStatusBadgeClass(invoice.status)}`}
-              >
-                <option value="draft">Concept</option>
-                <option value="sent">Verzonden</option>
-                <option value="paid">Betaald</option>
-              </select>
-              
-              <button 
-                className={styles.downloadButton} 
-                onClick={handleDownloadPDF}
-                disabled={downloadingPDF}
-              >
-                <Download size={20} />
-                {downloadingPDF ? 'Genereren...' : 'Download PDF'}
-              </button>
-            </>
-          ) : (
-            <>
-              <button onClick={cancelEditing} className={styles.cancelButton} disabled={isSaving}>
-                <X size={20} />
-                Annuleren
-              </button>
-              <button onClick={saveChanges} className={styles.saveButton} disabled={isSaving}>
-                <Save size={20} />
-                {isSaving ? 'Opslaan...' : 'Opslaan'}
-              </button>
-            </>
-          )}
-        </div>
+
+        {!isEditing && (
+          <div className={styles.headerActions}>
+            <button onClick={startEditing} className={styles.actionBtn} aria-label="Bewerken">
+              <Edit2 size={20} />
+              <span className={styles.actionLabel}>Bewerken</span>
+            </button>
+
+            <select
+              value={invoice.status}
+              onChange={(e) => handleStatusChange(e.target.value as 'draft' | 'sent' | 'paid')}
+              disabled={updatingStatus}
+              className={`${styles.statusSelect} ${getStatusBadgeClass(invoice.status)}`}
+              aria-label="Status"
+            >
+              <option value="draft">Concept</option>
+              <option value="sent">Verzonden</option>
+              <option value="paid">Betaald</option>
+            </select>
+
+            <button
+              className={styles.actionBtn}
+              onClick={handleDownloadPDF}
+              disabled={downloadingPDF}
+              aria-label="Download PDF"
+            >
+              <Download size={20} />
+              <span className={styles.actionLabel}>{downloadingPDF ? 'Laden...' : 'PDF'}</span>
+            </button>
+
+            <button
+              className={styles.actionBtn}
+              onClick={() => setShowSendModal(true)}
+              disabled={!invoice.items || invoice.items.length === 0}
+              aria-label="Verstuur per e-mail"
+            >
+              <Mail size={20} />
+              <span className={styles.actionLabel}>Verstuur</span>
+            </button>
+          </div>
+        )}
       </header>
 
       {/* Invoice */}
@@ -352,7 +349,7 @@ export default function InvoiceDetailPage() {
               <p className={styles.partyDetail}>Bedrijfsgegevens niet ingevuld. Ga naar Instellingen.</p>
             )}
           </div>
-          
+
           <div className={styles.party}>
             <h3 className={styles.partyTitle}>Aan</h3>
             {isEditing ? (
@@ -363,6 +360,7 @@ export default function InvoiceDetailPage() {
                   onChange={(e) => setEditedClientName(e.target.value)}
                   placeholder="Klantnaam"
                   className={styles.editInput}
+                  autoComplete="organization"
                 />
                 <input
                   type="email"
@@ -370,6 +368,7 @@ export default function InvoiceDetailPage() {
                   onChange={(e) => setEditedClientEmail(e.target.value)}
                   placeholder="E-mail (optioneel)"
                   className={styles.editInput}
+                  autoComplete="email"
                 />
                 <textarea
                   value={editedClientAddress}
@@ -377,6 +376,7 @@ export default function InvoiceDetailPage() {
                   placeholder="Adres (optioneel)"
                   className={styles.editTextarea}
                   rows={3}
+                  autoComplete="street-address"
                 />
               </div>
             ) : (
@@ -413,8 +413,9 @@ export default function InvoiceDetailPage() {
           )}
         </div>
 
-        {/* Items Table */}
+        {/* Items — Desktop: table, Mobile: stacked cards */}
         <div className={styles.itemsSection}>
+          {/* Desktop table */}
           <table className={styles.itemsTable}>
             <thead>
               <tr>
@@ -436,6 +437,7 @@ export default function InvoiceDetailPage() {
                         onChange={(e) => updateItemField(index, 'description', e.target.value)}
                         className={styles.itemInput}
                         placeholder="Omschrijving"
+                        inputMode="text"
                       />
                     </td>
                     <td>
@@ -446,6 +448,7 @@ export default function InvoiceDetailPage() {
                         className={styles.itemInputSmall}
                         min="0"
                         step="0.01"
+                        inputMode="decimal"
                       />
                     </td>
                     <td>
@@ -456,6 +459,7 @@ export default function InvoiceDetailPage() {
                         className={styles.itemInputSmall}
                         min="0"
                         step="0.01"
+                        inputMode="decimal"
                       />
                     </td>
                     <td>{formatAmount(item.total_price)}</td>
@@ -482,7 +486,74 @@ export default function InvoiceDetailPage() {
               )}
             </tbody>
           </table>
-          
+
+          {/* Mobile cards */}
+          <div className={styles.itemCards}>
+            {isEditing ? (
+              editedItems.map((item, index) => (
+                <div key={index} className={styles.itemCard}>
+                  <div className={styles.itemCardField}>
+                    <label className={styles.itemCardLabel}>Omschrijving</label>
+                    <input
+                      type="text"
+                      value={item.description}
+                      onChange={(e) => updateItemField(index, 'description', e.target.value)}
+                      className={styles.editInput}
+                      placeholder="Omschrijving"
+                      inputMode="text"
+                    />
+                  </div>
+                  <div className={styles.itemCardRow}>
+                    <div className={styles.itemCardFieldHalf}>
+                      <label className={styles.itemCardLabel}>Aantal</label>
+                      <input
+                        type="number"
+                        value={item.quantity}
+                        onChange={(e) => updateItemField(index, 'quantity', parseFloat(e.target.value) || 0)}
+                        className={styles.editInput}
+                        min="0"
+                        step="0.01"
+                        inputMode="decimal"
+                      />
+                    </div>
+                    <div className={styles.itemCardFieldHalf}>
+                      <label className={styles.itemCardLabel}>Prijs per stuk</label>
+                      <input
+                        type="number"
+                        value={item.unit_price}
+                        onChange={(e) => updateItemField(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                        className={styles.editInput}
+                        min="0"
+                        step="0.01"
+                        inputMode="decimal"
+                      />
+                    </div>
+                  </div>
+                  <div className={styles.itemCardFooter}>
+                    <span className={styles.itemCardTotal}>Totaal: {formatAmount(item.total_price)}</span>
+                    <button
+                      onClick={() => removeItem(index)}
+                      className={styles.removeItemButton}
+                      title="Verwijderen"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              invoice.items.map((item) => (
+                <div key={item.id} className={styles.itemCard}>
+                  <div className={styles.itemCardDesc}>{item.description}</div>
+                  <div className={styles.itemCardRow}>
+                    <span>{item.quantity} x {formatAmount(item.unit_price)}</span>
+                    <span className={styles.itemCardTotal}>{formatAmount(item.total_price)}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
           {isEditing && (
             <button onClick={addNewItem} className={styles.addItemButton}>
               <Plus size={20} />
@@ -527,6 +598,34 @@ export default function InvoiceDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Sticky edit bar — mobile only */}
+      {isEditing && (
+        <div className={styles.stickyBar}>
+          <button onClick={cancelEditing} className={styles.stickyCancel} disabled={isSaving}>
+            <X size={20} />
+            Annuleren
+          </button>
+          <button onClick={saveChanges} className={styles.stickySave} disabled={isSaving}>
+            <Save size={20} />
+            {isSaving ? 'Opslaan...' : 'Opslaan'}
+          </button>
+        </div>
+      )}
+
+      {invoice && (
+        <SendInvoiceModal
+          isOpen={showSendModal}
+          onClose={() => setShowSendModal(false)}
+          invoiceId={invoice.id}
+          invoiceNumber={invoice.invoice_number}
+          clientName={invoice.client_name}
+          clientEmail={invoice.client_email}
+          totalAmount={invoice.total_amount}
+          companyEmail={invoice.company_settings?.email || null}
+          onSent={() => loadInvoice()}
+        />
+      )}
     </div>
   )
 }

@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { getGeminiClient } from '@/lib/gemini'
 import { calculateExclVAT } from '@/lib/vat'
+import { getUserOrganizationId } from '@/lib/org'
 
 /**
  * Create a transaction automatically from a receipt upload
@@ -26,6 +27,8 @@ export async function createTransactionFromReceipt(formData: FormData) {
   if (!user) {
     throw new Error('Je moet ingelogd zijn om een transactie toe te voegen')
   }
+
+  const orgId = await getUserOrganizationId(supabase)
 
   // Get file from formData
   const file = formData.get('receipt') as File | null
@@ -68,6 +71,7 @@ export async function createTransactionFromReceipt(formData: FormData) {
     .from('documents')
     .insert({
       user_id: user.id,
+      ...(orgId && { organization_id: orgId }),
       file_path: uploadData.path, // Legacy field
       storage_path: uploadData.path, // New field for clarity
       storage_bucket: 'documents',
@@ -203,6 +207,7 @@ export async function createTransactionFromReceipt(formData: FormData) {
     // Create transaction
     const transactionData = {
       gebruiker_id: user.id,
+      ...(orgId && { organization_id: orgId }),
       datum: new Date(datum).toISOString(),
       bedrag: amounts.total,
       omschrijving,
@@ -285,6 +290,8 @@ export async function extractTransactionFromDocument(formData: FormData) {
   if (!user) {
     throw new Error('Je moet ingelogd zijn om documenten te uploaden')
   }
+
+  const orgId = await getUserOrganizationId(supabase)
 
   // Get file from formData
   const file = formData.get('file') as File | null
@@ -424,6 +431,7 @@ export async function extractTransactionFromDocument(formData: FormData) {
     
     const fullInsert = {
       user_id: user.id,
+      ...(orgId && { organization_id: orgId }),
       file_path: uploadData.path,
       storage_path: uploadData.path,
       storage_bucket: 'documents',
@@ -444,6 +452,7 @@ export async function extractTransactionFromDocument(formData: FormData) {
       // Try with base schema only (without migration 004 fields)
       const baseInsert = {
         user_id: user.id,
+        ...(orgId && { organization_id: orgId }),
         file_path: uploadData.path,
         original_filename: file.name,
         mime_type: file.type,
@@ -507,6 +516,8 @@ export async function createTransaction(formData: FormData) {
   if (!user) {
     throw new Error('Je moet ingelogd zijn om een transactie toe te voegen')
   }
+
+  const orgId = await getUserOrganizationId(supabase)
 
   // Validate and parse form data
   const datum = formData.get('datum') as string
@@ -577,6 +588,7 @@ export async function createTransaction(formData: FormData) {
 
   const rawData = {
     gebruiker_id: user.id,
+    ...(orgId && { organization_id: orgId }),
     datum: new Date(datum).toISOString(),
     bedrag,
     omschrijving,
@@ -650,6 +662,8 @@ export async function updateTransaction(transactionId: string, formData: FormDat
   if (!user) {
     throw new Error('Je moet ingelogd zijn om een transactie te bewerken')
   }
+
+  const orgId = await getUserOrganizationId(supabase)
 
   // Validate and parse form data (same as create)
   const datum = formData.get('datum') as string
@@ -806,11 +820,19 @@ export async function getTransactions() {
     return []
   }
 
-  const { data, error } = await supabase
+  const orgId = await getUserOrganizationId(supabase)
+
+  let query = supabase
     .from('transacties')
     .select('id, datum, bedrag, omschrijving, type_transactie, btw_tarief, categorie, vat_treatment, bon_url')
-    .eq('gebruiker_id', user.id)
-    .order('datum', { ascending: false })
+
+  if (orgId) {
+    query = query.eq('organization_id', orgId)
+  } else {
+    query = query.eq('gebruiker_id', user.id)
+  }
+
+  const { data, error } = await query.order('datum', { ascending: false })
 
   if (error) {
     console.error('Error fetching transactions:', error)
@@ -837,12 +859,20 @@ export async function getTransaction(transactionId: string) {
     return null
   }
 
-  const { data, error } = await supabase
+  const orgId = await getUserOrganizationId(supabase)
+
+  let query = supabase
     .from('transacties')
     .select('id, gebruiker_id, datum, bedrag, omschrijving, type_transactie, btw_tarief, categorie, vat_treatment, eu_location, bon_url')
     .eq('id', transactionId)
-    .eq('gebruiker_id', user.id)
-    .single()
+
+  if (orgId) {
+    query = query.eq('organization_id', orgId)
+  } else {
+    query = query.eq('gebruiker_id', user.id)
+  }
+
+  const { data, error } = await query.single()
 
   if (error) {
     console.error('Error fetching transaction:', error)
@@ -909,6 +939,8 @@ export async function getTransactionsWithTotals(
     }
   }
 
+  const orgId = await getUserOrganizationId(supabase)
+
   // Build date filter based on year and optional month
   let startDate: string
   let endDate: string
@@ -925,10 +957,17 @@ export async function getTransactionsWithTotals(
   }
 
   // Fetch totals (lightweight query over all matching rows)
-  const { data: allTransactions, error: totalsError } = await supabase
+  let totalsQuery = supabase
     .from('transacties')
     .select('bedrag, type_transactie, btw_tarief, vat_treatment')
-    .eq('gebruiker_id', user.id)
+
+  if (orgId) {
+    totalsQuery = totalsQuery.eq('organization_id', orgId)
+  } else {
+    totalsQuery = totalsQuery.eq('gebruiker_id', user.id)
+  }
+
+  const { data: allTransactions, error: totalsError } = await totalsQuery
     .gte('datum', startDate)
     .lte('datum', endDate)
 
@@ -961,10 +1000,17 @@ export async function getTransactionsWithTotals(
   const from = page * pageSize
   const to = from + pageSize
 
-  const { data: transactions, error } = await supabase
+  let paginatedQuery = supabase
     .from('transacties')
     .select('id, datum, bedrag, omschrijving, type_transactie, btw_tarief, categorie, vat_treatment, bon_url')
-    .eq('gebruiker_id', user.id)
+
+  if (orgId) {
+    paginatedQuery = paginatedQuery.eq('organization_id', orgId)
+  } else {
+    paginatedQuery = paginatedQuery.eq('gebruiker_id', user.id)
+  }
+
+  const { data: transactions, error } = await paginatedQuery
     .gte('datum', startDate)
     .lte('datum', endDate)
     .order('datum', { ascending: false })
@@ -1110,11 +1156,20 @@ export async function getTaxDeadlines(year: number) {
     throw new Error('Je moet ingelogd zijn')
   }
 
+  const orgId = await getUserOrganizationId(supabase)
+
   // Fetch existing deadlines for this year
-  const { data: existingDeadlines, error: fetchError } = await supabase
+  let deadlinesQuery = supabase
     .from('tax_deadlines')
     .select('id, deadline_type, tax_year, deadline_date, acknowledged, acknowledged_at')
-    .eq('user_id', user.id)
+
+  if (orgId) {
+    deadlinesQuery = deadlinesQuery.eq('organization_id', orgId)
+  } else {
+    deadlinesQuery = deadlinesQuery.eq('user_id', user.id)
+  }
+
+  const { data: existingDeadlines, error: fetchError } = await deadlinesQuery
     .eq('tax_year', year)
     .order('deadline_date', { ascending: true })
 
@@ -1128,30 +1183,35 @@ export async function getTaxDeadlines(year: number) {
     const deadlinesToCreate = [
       {
         user_id: user.id,
+        ...(orgId && { organization_id: orgId }),
         deadline_type: 'inkomstenbelasting',
         tax_year: year,
         deadline_date: `${year}-05-01`, // May 1st for previous year's income tax
       },
       {
         user_id: user.id,
+        ...(orgId && { organization_id: orgId }),
         deadline_type: 'btw_q1',
         tax_year: year,
         deadline_date: `${year}-04-30`, // Q1 (Jan-Mar) due April 30
       },
       {
         user_id: user.id,
+        ...(orgId && { organization_id: orgId }),
         deadline_type: 'btw_q2',
         tax_year: year,
         deadline_date: `${year}-07-31`, // Q2 (Apr-Jun) due July 31
       },
       {
         user_id: user.id,
+        ...(orgId && { organization_id: orgId }),
         deadline_type: 'btw_q3',
         tax_year: year,
         deadline_date: `${year}-10-31`, // Q3 (Jul-Sep) due October 31
       },
       {
         user_id: user.id,
+        ...(orgId && { organization_id: orgId }),
         deadline_type: 'btw_q4',
         tax_year: year,
         deadline_date: `${year + 1}-01-31`, // Q4 (Oct-Dec) due January 31 next year
@@ -1203,4 +1263,108 @@ export async function acknowledgeDeadline(deadlineId: string) {
   }
 
   revalidatePath('/dashboard/belastingen')
+}
+
+/**
+ * Get action items for the dashboard "Te doen" section
+ */
+export interface DashboardActionItems {
+  pendingExpenses: number
+  draftInvoices: number
+  overdueDeadlines: Array<{
+    id: string
+    display_name: string
+    deadline_date: string
+    days_overdue: number
+  }>
+  companyName: string | null
+}
+
+export async function getDashboardActionItems(): Promise<DashboardActionItems> {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { pendingExpenses: 0, draftInvoices: 0, overdueDeadlines: [], companyName: null }
+  }
+
+  const orgId = await getUserOrganizationId(supabase)
+
+  // Pending expenses count
+  let expenseQuery = supabase
+    .from('pending_expenses')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending')
+  if (orgId) {
+    expenseQuery = expenseQuery.eq('organization_id', orgId)
+  } else {
+    expenseQuery = expenseQuery.eq('user_id', user.id)
+  }
+  const { count: pendingExpenses } = await expenseQuery
+
+  // Draft invoices count
+  let invoiceQuery = supabase
+    .from('invoices')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'draft')
+  if (orgId) {
+    invoiceQuery = invoiceQuery.eq('organization_id', orgId)
+  } else {
+    invoiceQuery = invoiceQuery.eq('user_id', user.id)
+  }
+  const { count: draftInvoices } = await invoiceQuery
+
+  // Overdue deadlines
+  const now = new Date().toISOString().split('T')[0]
+  let deadlineQuery = supabase
+    .from('tax_deadlines')
+    .select('id, deadline_type, tax_year, deadline_date')
+    .eq('acknowledged', false)
+    .lt('deadline_date', now)
+  if (orgId) {
+    deadlineQuery = deadlineQuery.eq('organization_id', orgId)
+  } else {
+    deadlineQuery = deadlineQuery.eq('user_id', user.id)
+  }
+  const { data: deadlines } = await deadlineQuery
+
+  const overdueDeadlines = (deadlines || []).map(d => {
+    const deadlineDate = new Date(d.deadline_date)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const daysOverdue = Math.ceil((today.getTime() - deadlineDate.getTime()) / (1000 * 60 * 60 * 24))
+
+    let displayName = ''
+    if (d.deadline_type === 'inkomstenbelasting') {
+      displayName = `Inkomstenbelasting ${d.tax_year}`
+    } else {
+      const quarter = d.deadline_type.replace('btw_q', 'Q')
+      displayName = `BTW-aangifte ${quarter} ${d.tax_year}`
+    }
+
+    return {
+      id: d.id,
+      display_name: displayName,
+      deadline_date: d.deadline_date,
+      days_overdue: daysOverdue,
+    }
+  })
+
+  // Company name for greeting
+  let settingsQuery = supabase
+    .from('company_settings')
+    .select('company_name')
+  if (orgId) {
+    settingsQuery = settingsQuery.eq('organization_id', orgId)
+  } else {
+    settingsQuery = settingsQuery.eq('user_id', user.id)
+  }
+  const { data: settings } = await settingsQuery.single()
+
+  return {
+    pendingExpenses: pendingExpenses || 0,
+    draftInvoices: draftInvoices || 0,
+    overdueDeadlines,
+    companyName: settings?.company_name || null,
+  }
 }

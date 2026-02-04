@@ -10,6 +10,7 @@ export default function RegisterClient() {
   const [showEmailForm, setShowEmailForm] = useState(false)
   const searchParams = useSearchParams()
   const error = searchParams.get('error')
+  const inviteToken = searchParams.get('invite')
 
   return (
     <div className={styles.container}>

@@ -12,6 +12,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { calculateExclVAT } from '@/lib/vat'
+import { getUserOrganizationId } from '@/lib/org'
 
 export interface IBSummary {
   totals: {
@@ -114,16 +115,25 @@ export async function getIBSummary(year: number): Promise<IBSummary> {
     }
   }
 
+  const orgId = await getUserOrganizationId(supabase)
+
   // Fetch all transactions for the year
   const startDate = `${year}-01-01T00:00:00`
   const endDate = `${year}-12-31T23:59:59`
 
-  const { data: transactions, error } = await supabase
+  let query = supabase
     .from('transacties')
     .select('datum, bedrag, type_transactie, btw_tarief, categorie, vat_treatment')
-    .eq('gebruiker_id', user.id)
     .gte('datum', startDate)
     .lte('datum', endDate)
+
+  if (orgId) {
+    query = query.eq('organization_id', orgId)
+  } else {
+    query = query.eq('gebruiker_id', user.id)
+  }
+
+  const { data: transactions, error } = await query
 
   if (error || !transactions) {
     console.error('Error fetching IB transactions:', error)

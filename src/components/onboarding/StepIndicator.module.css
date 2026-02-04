@@ -1,0 +1,27 @@
+.container {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px 0;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.current {
+  background: #0071e3;
+  transform: scale(1.25);
+}
+
+.completed {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.upcoming {
+  background: transparent;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+}

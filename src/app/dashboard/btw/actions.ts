@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { calculateVATAmount } from '@/lib/vat'
+import { getUserOrganizationId } from '@/lib/org'
 
 /**
  * Dutch VAT Summary for quarterly reporting
@@ -94,16 +95,25 @@ export async function getVATSummary(year: number, quarter: 1 | 2 | 3 | 4): Promi
     }
   }
 
+  const orgId = await getUserOrganizationId(supabase)
+
   // Get date range for the quarter
   const { start, end } = getQuarterDateRange(year, quarter)
 
   // Fetch all transactions for this user in the date range
-  const { data: transactions, error } = await supabase
+  let query = supabase
     .from('transacties')
     .select('datum, bedrag, type_transactie, btw_tarief, vat_treatment, eu_location')
-    .eq('gebruiker_id', user.id)
     .gte('datum', start)
     .lte('datum', end)
+
+  if (orgId) {
+    query = query.eq('organization_id', orgId)
+  } else {
+    query = query.eq('gebruiker_id', user.id)
+  }
+
+  const { data: transactions, error } = await query
 
   if (error) {
     console.error('Error fetching transactions for VAT summary:', error)

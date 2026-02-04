@@ -1,5 +1,7 @@
+/* Bottom Navigation — mobile only, mobile-first */
+
 .bottomNav {
-  display: none;
+  display: flex;
   position: fixed;
   bottom: 0;
   left: 0;
@@ -13,9 +15,10 @@
   align-items: center;
 }
 
-@media (max-width: 768px) {
+/* Hidden on desktop */
+@media (min-width: 769px) {
   .bottomNav {
-    display: flex;
+    display: none;
   }
 }
 
@@ -26,10 +29,15 @@
   justify-content: center;
   gap: 0.25rem;
   padding: 0.5rem;
+  min-height: var(--touch-target-min, 44px);
+  min-width: 64px;
   color: rgba(255, 255, 255, 0.5);
   text-decoration: none;
   transition: color 0.2s;
-  min-width: 64px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
 }
 
 .navItem:hover {
@@ -47,7 +55,7 @@
   letter-spacing: 0.01em;
 }
 
-/* Center camera button - larger and raised */
+/* Center camera button — larger and raised */
 .cameraButton {
   display: flex;
   align-items: center;
@@ -71,4 +79,83 @@
 
 .cameraButton:active {
   transform: scale(0.95);
+}
+
+/* "Meer" bottom sheet */
+.moreBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 899;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.moreSheet {
+  position: fixed;
+  bottom: calc(var(--bottom-nav-height, 60px) + var(--safe-area-bottom, 0px));
+  left: 0;
+  right: 0;
+  background: #1a1d24;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  padding: 0.5rem 1rem 1rem;
+  z-index: 899;
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.5);
+  animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.moreHandle {
+  width: 36px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  margin: 0 auto 0.75rem;
+}
+
+.moreNav {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.moreItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  min-height: var(--touch-target-min, 44px);
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  transition: background 0.15s;
+}
+
+.moreItem:hover {
+  background: rgba(255, 255, 255, 0.06);
+  opacity: 1;
+}
+
+.moreItemActive {
+  background: rgba(0, 113, 227, 0.15);
+  color: #0071e3;
+}
+
+/* Hide more sheet on desktop */
+@media (min-width: 769px) {
+  .moreBackdrop,
+  .moreSheet {
+    display: none;
+  }
 }

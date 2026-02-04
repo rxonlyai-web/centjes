@@ -10,17 +10,12 @@
   border-right: 1px solid rgba(255, 255, 255, 0.05);
   z-index: 40;
   transition: transform 0.3s ease;
+  /* Mobile: hidden by default */
+  transform: translateX(-100%);
 }
 
-/* Mobile: hidden by default */
-@media (max-width: 768px) {
-  .sidebar {
-    transform: translateX(-100%);
-  }
-
-  .sidebar.open {
-    transform: translateX(0);
-  }
+.sidebar.open {
+  transform: translateX(0);
 }
 
 .header {
@@ -54,7 +49,9 @@
 }
 
 .closeButton {
-  display: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   color: rgba(255, 255, 255, 0.6);
@@ -67,14 +64,6 @@
 .closeButton:hover {
   background-color: rgba(255, 255, 255, 0.1);
   color: white;
-}
-
-@media (max-width: 768px) {
-  .closeButton {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
 }
 
 .nav {
@@ -160,7 +149,7 @@
 
 /* Overlay */
 .overlay {
-  display: none;
+  display: block;
   position: fixed;
   inset: 0;
   background-color: rgba(0, 0, 0, 0.5);
@@ -173,12 +162,6 @@
 .overlay.open {
   opacity: 1;
   pointer-events: auto;
-}
-
-@media (max-width: 768px) {
-  .overlay {
-    display: block;
-  }
 }
 
 /* Disabled navigation items */
@@ -224,4 +207,19 @@
 
 .link:hover .notificationBadge {
   background-color: #ff453a; /* Lighter red on hover */
+}
+
+/* Desktop: sidebar always visible */
+@media (min-width: 769px) {
+  .sidebar {
+    transform: translateX(0);
+  }
+
+  .closeButton {
+    display: none;
+  }
+
+  .overlay {
+    display: none;
+  }
 }

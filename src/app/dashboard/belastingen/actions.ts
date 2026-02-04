@@ -9,6 +9,7 @@
  */
 
 import { createClient } from '@/utils/supabase/server'
+import { getUserOrganizationId } from '@/lib/org'
 
 export interface TaxDeadline {
   id: string
@@ -35,12 +36,21 @@ export async function getTaxDeadlines(year: number): Promise<TaxDeadline[]> {
     throw new Error('User not authenticated')
   }
 
+  const orgId = await getUserOrganizationId(supabase)
+
   // Check if deadlines exist for this year
-  const { data: existing, error: fetchError } = await supabase
+  let fetchQuery = supabase
     .from('tax_deadlines')
     .select('*')
-    .eq('user_id', user.id)
     .eq('tax_year', year)
+
+  if (orgId) {
+    fetchQuery = fetchQuery.eq('organization_id', orgId)
+  } else {
+    fetchQuery = fetchQuery.eq('user_id', user.id)
+  }
+
+  const { data: existing, error: fetchError } = await fetchQuery
 
   if (fetchError) {
     console.error('Error fetching tax deadlines:', fetchError)
@@ -49,14 +59,21 @@ export async function getTaxDeadlines(year: number): Promise<TaxDeadline[]> {
 
   // If no deadlines exist, generate them
   if (!existing || existing.length === 0) {
-    await generateDeadlines(year, user.id)
-    
+    await generateDeadlines(year, user.id, orgId)
+
     // Fetch the newly created deadlines
-    const { data: newDeadlines, error: newFetchError } = await supabase
+    let newFetchQuery = supabase
       .from('tax_deadlines')
       .select('*')
-      .eq('user_id', user.id)
       .eq('tax_year', year)
+
+    if (orgId) {
+      newFetchQuery = newFetchQuery.eq('organization_id', orgId)
+    } else {
+      newFetchQuery = newFetchQuery.eq('user_id', user.id)
+    }
+
+    const { data: newDeadlines, error: newFetchError } = await newFetchQuery
 
     if (newFetchError || !newDeadlines) {
       throw new Error('Failed to fetch generated deadlines')
@@ -71,7 +88,7 @@ export async function getTaxDeadlines(year: number): Promise<TaxDeadline[]> {
 /**
  * Generate standard Dutch tax deadlines for a given year
  */
-async function generateDeadlines(year: number, userId: string) {
+async function generateDeadlines(year: number, userId: string, orgId?: string | null) {
   const supabase = await createClient()
 
   const deadlines = [
@@ -80,30 +97,35 @@ async function generateDeadlines(year: number, userId: string) {
       deadline_type: 'inkomstenbelasting',
       tax_year: year - 1, // IB for previous year
       deadline_date: `${year}-05-01`, // May 1st
+      ...(orgId && { organization_id: orgId }),
     },
     {
       user_id: userId,
       deadline_type: 'btw_q1',
       tax_year: year,
       deadline_date: `${year}-04-30`, // Q1 (Jan-Mar) due April 30
+      ...(orgId && { organization_id: orgId }),
     },
     {
       user_id: userId,
       deadline_type: 'btw_q2',
       tax_year: year,
       deadline_date: `${year}-07-31`, // Q2 (Apr-Jun) due July 31
+      ...(orgId && { organization_id: orgId }),
     },
     {
       user_id: userId,
       deadline_type: 'btw_q3',
       tax_year: year,
       deadline_date: `${year}-10-31`, // Q3 (Jul-Sep) due October 31
+      ...(orgId && { organization_id: orgId }),
     },
     {
       user_id: userId,
       deadline_type: 'btw_q4',
       tax_year: year,
       deadline_date: `${year + 1}-01-31`, // Q4 (Oct-Dec) due January 31 next year
+      ...(orgId && { organization_id: orgId }),
     },
   ]
 
@@ -217,17 +239,26 @@ export async function getUnacknowledgedCount(): Promise<number> {
     return 0 // Return 0 if not authenticated
   }
 
+  const orgId = await getUserOrganizationId(supabase)
+
   const now = new Date()
   const thirtyDaysFromNow = new Date()
   thirtyDaysFromNow.setDate(now.getDate() + 30)
 
-  const { data, error } = await supabase
+  let countQuery = supabase
     .from('tax_deadlines')
     .select('id', { count: 'exact', head: true })
-    .eq('user_id', user.id)
     .eq('acknowledged', false)
     .gte('deadline_date', now.toISOString().split('T')[0])
     .lte('deadline_date', thirtyDaysFromNow.toISOString().split('T')[0])
+
+  if (orgId) {
+    countQuery = countQuery.eq('organization_id', orgId)
+  } else {
+    countQuery = countQuery.eq('user_id', user.id)
+  }
+
+  const { data, error } = await countQuery
 
   if (error) {
     console.error('Error fetching unacknowledged count:', error)

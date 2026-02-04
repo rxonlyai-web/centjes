@@ -1,47 +1,38 @@
 'use client'
 
-/**
- * Main Dashboard Page - Income Tax Overview
- * 
- * This is the primary dashboard showing the annual income tax (IB) overview.
- * Previously, this content was at /dashboard/ib, but has been moved here to be
- * the main landing page for authenticated users.
- * 
- * Features:
- * - KPI cards (revenue, expenses, profit)
- * - Monthly chart showing revenue vs expenses
- * - Category breakdowns
- * - Cost classification by deductibility
- * - Quick action to create new transactions
- * 
- * Uses global activeYear from YearContext - automatically updates when year changes.
- * Shares transaction creation mechanism with /dashboard/transacties.
- */
-
 import { useState, useEffect, useCallback } from 'react'
 import dynamic from 'next/dynamic'
+import Link from 'next/link'
+import { Inbox, FileText, AlertTriangle, Check } from 'lucide-react'
 import { useActiveYear } from '@/contexts/YearContext'
 import { getIBSummary, type IBSummary } from './ib/actions'
+import { getDashboardActionItems, acknowledgeDeadline, type DashboardActionItems } from './actions'
 import KPICards from './ib/components/KPICards'
 import CategoryTable from './ib/components/CategoryTable'
 import CostClassificationTable from './ib/components/CostClassificationTable'
 import Drawer from '@/components/Drawer'
 import TransactionForm from '@/components/TransactionForm'
 import styles from './ib/ib.module.css'
+import dashStyles from './dashboard.module.css'
 
 const MonthlyChart = dynamic(() => import('./ib/components/MonthlyChart'), {
   ssr: false,
   loading: () => <div style={{ height: 350, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.4)' }}>Grafiek laden...</div>
 })
 
+function getGreeting(): string {
+  const hour = new Date().getHours()
+  if (hour >= 6 && hour < 12) return 'Goedemorgen'
+  if (hour >= 12 && hour < 18) return 'Goedemiddag'
+  return 'Goedenavond'
+}
+
 export default function DashboardPage() {
-  // Get active year from global context
   const { activeYear } = useActiveYear()
-  
+
   const [summary, setSummary] = useState<IBSummary | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  
-  // Transaction drawer state (shared mechanism with Transacties page)
+  const [actionItems, setActionItems] = useState<DashboardActionItems | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
   const loadIBSummary = useCallback(async () => {
@@ -56,25 +47,52 @@ export default function DashboardPage() {
     }
   }, [activeYear])
 
+  const loadActionItems = useCallback(async () => {
+    try {
+      const items = await getDashboardActionItems()
+      setActionItems(items)
+    } catch (error) {
+      console.error('Failed to load action items:', error)
+    }
+  }, [])
+
   useEffect(() => {
     loadIBSummary()
-  }, [loadIBSummary])
+    loadActionItems()
+  }, [loadIBSummary, loadActionItems])
 
-  // Handle transaction creation success
   const handleTransactionSuccess = async () => {
     setIsDrawerOpen(false)
-    await loadIBSummary() // Reload dashboard data after creating transaction
+    await loadIBSummary()
+    await loadActionItems()
   }
+
+  async function handleAcknowledgeDeadline(deadlineId: string) {
+    try {
+      await acknowledgeDeadline(deadlineId)
+      await loadActionItems()
+    } catch (error) {
+      console.error('Failed to acknowledge deadline:', error)
+    }
+  }
+
+  const hasActionItems = actionItems && (
+    actionItems.pendingExpenses > 0 ||
+    actionItems.draftInvoices > 0 ||
+    actionItems.overdueDeadlines.length > 0
+  )
 
   return (
     <div className={styles.container}>
       <header className={styles.header}>
         <div className={styles.headerContent}>
           <div>
-            <h1 className={styles.title}>Jaaroverzicht Inkomstenbelasting</h1>
+            <h1 className={styles.title}>
+              {getGreeting()}{actionItems?.companyName ? `, ${actionItems.companyName}` : ''}
+            </h1>
             <p className={styles.subtitle}>Fiscaal jaar {activeYear}</p>
           </div>
-          <button 
+          <button
             className={styles.primaryButton}
             onClick={() => setIsDrawerOpen(true)}
           >
@@ -83,16 +101,62 @@ export default function DashboardPage() {
         </div>
       </header>
 
+      {/* Action Items */}
+      {hasActionItems && (
+        <section className={dashStyles.actionItems}>
+          {actionItems!.pendingExpenses > 0 && (
+            <Link href="/dashboard/uitgaven" className={dashStyles.actionCard}>
+              <Inbox size={20} className={dashStyles.actionIcon} />
+              <div className={dashStyles.actionText}>
+                <span className={dashStyles.actionCount}>{actionItems!.pendingExpenses}</span>
+                <span className={dashStyles.actionLabel}>
+                  {actionItems!.pendingExpenses === 1 ? 'uitgave te beoordelen' : 'uitgaven te beoordelen'}
+                </span>
+              </div>
+            </Link>
+          )}
+
+          {actionItems!.draftInvoices > 0 && (
+            <Link href="/dashboard/facturen" className={dashStyles.actionCard}>
+              <FileText size={20} className={dashStyles.actionIcon} />
+              <div className={dashStyles.actionText}>
+                <span className={dashStyles.actionCount}>{actionItems!.draftInvoices}</span>
+                <span className={dashStyles.actionLabel}>
+                  {actionItems!.draftInvoices === 1 ? 'conceptfactuur' : 'conceptfacturen'}
+                </span>
+              </div>
+            </Link>
+          )}
+
+          {actionItems!.overdueDeadlines.map(deadline => (
+            <div key={deadline.id} className={dashStyles.actionCard}>
+              <AlertTriangle size={20} className={dashStyles.actionIconWarning} />
+              <div className={dashStyles.actionText}>
+                <span className={dashStyles.actionLabel}>
+                  {deadline.display_name} — {deadline.days_overdue} {deadline.days_overdue === 1 ? 'dag' : 'dagen'} te laat
+                </span>
+              </div>
+              <button
+                onClick={() => handleAcknowledgeDeadline(deadline.id)}
+                className={dashStyles.actionDoneBtn}
+                type="button"
+                title="Markeer als afgehandeld"
+              >
+                <Check size={16} />
+              </button>
+            </div>
+          ))}
+        </section>
+      )}
+
       {isLoading ? (
         <div className={styles.loading}>
           <p>Laden...</p>
         </div>
       ) : summary ? (
         <>
-          {/* KPI Cards */}
           <KPICards data={summary.totals} />
 
-          {/* Monthly Chart */}
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>Omzet & Kosten per maand</h2>
             <div className={styles.chartSection}>
@@ -100,21 +164,19 @@ export default function DashboardPage() {
             </div>
           </section>
 
-          {/* Category Tables */}
           <section className={styles.section}>
             <div className={styles.tablesGrid}>
-              <CategoryTable 
+              <CategoryTable
                 title="Omzet per categorie"
                 data={summary.categories.revenue}
               />
-              <CategoryTable 
+              <CategoryTable
                 title="Kosten per categorie"
                 data={summary.categories.expenses}
               />
             </div>
           </section>
 
-          {/* Cost Classification */}
           <section className={styles.section}>
             <CostClassificationTable data={summary.classification} />
           </section>
@@ -125,15 +187,14 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Transaction creation drawer - reuses same components as Transacties page */}
-      <Drawer 
-        isOpen={isDrawerOpen} 
+      <Drawer
+        isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         title="Nieuwe transactie"
       >
-        <TransactionForm 
+        <TransactionForm
           mode="create"
-          onSuccess={handleTransactionSuccess} 
+          onSuccess={handleTransactionSuccess}
         />
       </Drawer>
     </div>

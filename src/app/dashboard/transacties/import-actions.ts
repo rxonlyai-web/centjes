@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { getGeminiClient } from '@/lib/gemini'
 import { parseBankFile, type ParsedBankRow, type CategorizedTransaction, type BankFormat } from '@/lib/bank-csv'
+import { getUserOrganizationId } from '@/lib/org'
 
 // --- Action 1: Parse bank statement file ---
 
@@ -55,6 +56,8 @@ export async function categorizeBankTransactions(
     return { success: false, error: 'Niet ingelogd' }
   }
 
+  const orgId = await getUserOrganizationId(supabase)
+
   // 1. Determine type (income/expense) from sign
   const withType = transactions.map(t => ({
     ...t,
@@ -77,12 +80,19 @@ export async function categorizeBankTransactions(
   const minDate = dates.sort()[0]
   const maxDate = dates.sort().reverse()[0]
 
-  const { data: existing } = await supabase
+  let dupQuery = supabase
     .from('transacties')
     .select('datum, bedrag, omschrijving')
-    .eq('gebruiker_id', user.id)
     .gte('datum', `${minDate}T00:00:00`)
     .lte('datum', `${maxDate}T23:59:59`)
+
+  if (orgId) {
+    dupQuery = dupQuery.eq('organization_id', orgId)
+  } else {
+    dupQuery = dupQuery.eq('gebruiker_id', user.id)
+  }
+
+  const { data: existing } = await dupQuery
 
   const existingKeys = new Set(
     (existing || []).map(e => {
@@ -130,6 +140,8 @@ export async function importBankTransactions(
     return { success: false, error: 'Niet ingelogd' }
   }
 
+  const orgId = await getUserOrganizationId(supabase)
+
   let imported = 0
   let skipped = 0
 
@@ -146,6 +158,7 @@ export async function importBankTransactions(
         categorie: t.categorie,
         btw_tarief: t.btw_tarief,
         vat_treatment: t.vat_treatment,
+        ...(orgId && { organization_id: orgId }),
       })
 
     if (insertError) {
