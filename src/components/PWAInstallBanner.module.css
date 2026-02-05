@@ -1,0 +1,45 @@
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  background-color: rgba(0, 113, 227, 0.12);
+  border-bottom: 1px solid rgba(0, 113, 227, 0.25);
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+.text {
+  margin: 0;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.5;
+}
+
+.shareIcon {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  color: #0071e3;
+}
+
+.dismiss {
+  flex-shrink: 0;
+  margin-left: 1rem;
+  padding: 0.25rem 0.5rem;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 1rem;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color 0.2s, background-color 0.2s;
+}
+
+.dismiss:hover {
+  color: rgba(255, 255, 255, 0.9);
+  background-color: rgba(255, 255, 255, 0.06);
+}
