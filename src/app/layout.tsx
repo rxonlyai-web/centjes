@@ -18,12 +18,19 @@ export const metadata: Metadata = {
   description: "De moderne boekhoudtool voor ZZP'ers en VOF's.",
   icons: {
     icon: "/Favicon dark blue.svg",
+    apple: "/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Centjes",
   },
 };
 
 export const viewport = {
-  colorScheme: "dark",
+  colorScheme: "dark" as const,
   viewportFit: "cover" as const,
+  themeColor: "#0071e3",
 };
 
 export default function RootLayout({
@@ -32,7 +39,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="nl" className="dark">
       <body
         className={`${geistSans.variable} ${geistMono.variable}`}
         style={{ minHeight: "100vh" }}

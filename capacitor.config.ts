@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Centjes',
   webDir: 'public',
   server: {
-    url: 'https://centjes.eu',
+    url: 'https://www.centjes.eu',
     allowNavigation: [
       'centjes.eu',
       '*.centjes.eu',
