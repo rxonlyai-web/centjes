@@ -1,7 +1,8 @@
 /* Invoices Overview Page Styles */
+/* Mobile-first: base styles are mobile, desktop enhancements in @media (min-width: 769px) */
 
 .container {
-  padding: 2rem;
+  padding: 1rem;
   max-width: 1400px;
   margin: 0 auto;
 }
@@ -19,7 +20,7 @@
 }
 
 .title {
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;
@@ -39,13 +40,14 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 10px 20px;
+  padding: 0.5rem 1rem;
+  min-height: var(--touch-target-min, 44px);
   background-color: #0071e3;
   color: white;
   border: none;
   border-radius: 20px;
   font-weight: 500;
-  font-size: 14px;
+  font-size: 0.875rem;
   cursor: pointer;
   transition: background-color 0.2s, transform 0.1s;
   white-space: nowrap;
@@ -79,6 +81,7 @@
   gap: 0.75rem;
   width: 100%;
   padding: 0.75rem 1rem;
+  min-height: var(--touch-target-min, 44px);
   background: transparent;
   border: none;
   border-bottom: 1px solid var(--border-color);
@@ -110,6 +113,7 @@
 /* Filters */
 .filters {
   display: flex;
+  flex-direction: column;
   gap: 1rem;
   margin-bottom: 2rem;
 }
@@ -117,7 +121,7 @@
 .searchBox {
   position: relative;
   flex: 1;
-  max-width: 500px;
+  max-width: none;
 }
 
 .searchIcon {
@@ -132,11 +136,12 @@
 .searchInput {
   width: 100%;
   padding: 0.75rem 1rem 0.75rem 3rem;
+  min-height: var(--touch-target-min, 44px);
   background: var(--card-bg);
   border: 1px solid var(--border-color);
   border-radius: 8px;
   color: var(--text-primary);
-  font-size: 0.95rem;
+  font-size: 1rem;
   transition: all 0.2s;
 }
 
@@ -151,15 +156,16 @@
 }
 
 .statusFilter {
+  width: 100%;
   padding: 0.75rem 1rem;
+  min-height: var(--touch-target-min, 44px);
   background: var(--card-bg);
   border: 1px solid var(--border-color);
   border-radius: 8px;
   color: var(--text-primary);
-  font-size: 0.95rem;
+  font-size: 1rem;
   cursor: pointer;
   transition: all 0.2s;
-  min-width: 180px;
 }
 
 .statusFilter:hover {
@@ -248,6 +254,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
+  min-height: var(--touch-target-min, 44px);
   background: linear-gradient(135deg, #0071e3 0%, #005bb5 100%);
   color: white;
   border: none;
@@ -262,8 +269,9 @@
   box-shadow: 0 4px 12px rgba(0, 113, 227, 0.4);
 }
 
-/* Table */
+/* Table - hidden on mobile */
 .tableWrapper {
+  display: none;
   background: var(--card-bg);
   border: 1px solid var(--border-color);
   border-radius: 12px;
@@ -382,6 +390,8 @@
 
 .actionButton {
   padding: 0.5rem;
+  min-width: var(--touch-target-min, 44px);
+  min-height: var(--touch-target-min, 44px);
   background: transparent;
   border: 1px solid var(--border-color);
   border-radius: 6px;
@@ -405,9 +415,9 @@
   color: #ff3b30;
 }
 
-/* Mobile card list (hidden on desktop) */
+/* Mobile card list (visible on mobile) */
 .cardList {
-  display: none;
+  display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
@@ -422,6 +432,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  min-height: var(--touch-target-min, 44px);
 }
 
 .card:hover {
@@ -481,56 +492,52 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
-/* Responsive */
-@media (max-width: 1024px) {
+/* Desktop enhancements */
+@media (min-width: 769px) {
+  .container {
+    padding: 2rem;
+  }
+
+  .title {
+    font-size: 2rem;
+  }
+
+  .newInvoiceButton {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+
+  .filters {
+    flex-direction: row;
+  }
+
+  .searchBox {
+    max-width: 500px;
+  }
+
+  .statusFilter {
+    width: auto;
+    min-width: 180px;
+  }
+
+  /* Show table, hide cards on desktop */
+  .tableWrapper {
+    display: block;
+  }
+
+  .cardList {
+    display: none;
+  }
+}
+
+/* Large desktop */
+@media (min-width: 1025px) {
   .table {
-    font-size: 0.9rem;
+    font-size: 0.95rem;
   }
 
   .table th,
   .table td {
-    padding: 0.75rem;
-  }
-}
-
-@media (max-width: 768px) {
-  .container {
     padding: 1rem;
-  }
-
-  .headerTop {
-    flex-direction: row;
-    align-items: center;
-  }
-
-  .title {
-    font-size: 1.5rem;
-  }
-
-  .newInvoiceButton {
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    border-radius: 20px;
-  }
-
-  .filters {
-    flex-direction: column;
-  }
-
-  .searchBox {
-    max-width: none;
-  }
-
-  .statusFilter {
-    width: 100%;
-  }
-
-  /* Hide table, show cards on mobile */
-  .tableWrapper {
-    display: none;
-  }
-
-  .cardList {
-    display: flex;
   }
 }

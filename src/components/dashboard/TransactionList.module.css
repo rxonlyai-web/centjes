@@ -1,3 +1,5 @@
+/* Mobile-first: base styles are mobile, desktop enhancements in @media (min-width: 769px) */
+
 .listContainer {
   display: flex;
   flex-direction: column;
@@ -8,12 +10,13 @@
   background-color: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
-  padding: 1rem 1.25rem;
+  padding: 0.875rem 1rem;
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
   min-height: 44px; /* Touch target */
 }
 
@@ -37,6 +40,7 @@
 
 .transactionMeta {
   display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
   font-size: 0.875rem;
   color: rgba(255, 255, 255, 0.6);
@@ -44,8 +48,9 @@
 
 .transactionAmount {
   font-weight: 600;
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   white-space: nowrap;
+  align-self: flex-end;
 }
 
 .transactionAmount.income {
@@ -72,20 +77,22 @@
   color: rgba(255, 255, 255, 0.4);
 }
 
-@media (max-width: 768px) {
+/* Desktop enhancements */
+@media (min-width: 769px) {
   .transactionItem {
-    padding: 0.875rem 1rem;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
+    padding: 1rem 1.25rem;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0;
   }
 
   .transactionMeta {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
 
   .transactionAmount {
-    align-self: flex-end;
-    font-size: 1.25rem;
+    align-self: auto;
+    font-size: 1.125rem;
   }
 }

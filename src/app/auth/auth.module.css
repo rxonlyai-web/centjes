@@ -229,3 +229,15 @@
   text-align: center;
 }
 
+.backLink {
+  display: block;
+  color: var(--gray-500);
+  font-size: 0.875rem;
+  margin-bottom: 1.5rem;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.backLink:hover {
+  color: var(--accent);
+}

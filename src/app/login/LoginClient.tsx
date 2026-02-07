@@ -35,6 +35,9 @@ export default function LoginClient() {
   return (
     <div className={styles.container}>
       <div className={styles.wrapper}>
+        <Link href="/" className={styles.backLink}>
+          ← Terug naar home
+        </Link>
         <div>
           <h2 className={styles.title}>
             Inloggen

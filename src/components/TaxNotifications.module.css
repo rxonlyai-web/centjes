@@ -1,3 +1,6 @@
+/* TaxNotifications Dropdown Styles */
+/* Mobile-first: base styles are mobile, desktop enhancements in @media (min-width: 769px) */
+
 .container {
   position: relative;
 }
@@ -9,6 +12,8 @@
   justify-content: center;
   width: 40px;
   height: 40px;
+  min-width: var(--touch-target-min, 44px);
+  min-height: var(--touch-target-min, 44px);
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
@@ -47,15 +52,18 @@
   background: rgba(0, 0, 0, 0.3);
 }
 
+/* Mobile: bottom sheet style dropdown */
 .dropdown {
-  position: absolute;
-  top: calc(100% + 0.75rem);
-  right: 0;
-  width: 420px;
-  max-height: 600px;
+  position: fixed;
+  top: auto;
+  bottom: calc(var(--bottom-nav-height, 60px) + var(--safe-area-bottom, 0px) + 0.5rem);
+  left: 0.5rem;
+  right: 0.5rem;
+  width: auto;
+  max-height: 60vh;
   background: var(--surface-elevated);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 12px;
+  border-radius: 16px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
   z-index: 999;
   overflow: hidden;
@@ -85,6 +93,8 @@
   color: rgba(255, 255, 255, 0.6);
   cursor: pointer;
   padding: 0.25rem;
+  min-width: var(--touch-target-min, 44px);
+  min-height: var(--touch-target-min, 44px);
   border-radius: 4px;
   transition: all 0.2s;
   display: flex;
@@ -100,7 +110,7 @@
 .content {
   flex: 1;
   overflow-y: auto;
-  max-height: 450px;
+  max-height: 40vh;
 }
 
 .loading,
@@ -194,6 +204,7 @@
   font-size: 0.9rem;
   font-weight: 500;
   transition: all 0.2s;
+  min-height: var(--touch-target-min, 44px);
 }
 
 .link:hover {
@@ -237,6 +248,7 @@
 .expenseCard {
   display: block;
   padding: 1rem;
+  min-height: var(--touch-target-min, 44px);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
@@ -293,20 +305,20 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
-/* Responsive */
-@media (max-width: 768px) {
+/* Desktop enhancements */
+@media (min-width: 769px) {
   .dropdown {
-    position: fixed;
-    top: auto;
-    bottom: calc(var(--bottom-nav-height, 60px) + var(--safe-area-bottom, 0px) + 0.5rem);
-    left: 0.5rem;
-    right: 0.5rem;
-    width: auto;
-    max-height: 60vh;
-    border-radius: 16px;
+    position: absolute;
+    top: calc(100% + 0.75rem);
+    right: 0;
+    bottom: auto;
+    left: auto;
+    width: 420px;
+    max-height: 600px;
+    border-radius: 12px;
   }
 
   .content {
-    max-height: 40vh;
+    max-height: 450px;
   }
 }

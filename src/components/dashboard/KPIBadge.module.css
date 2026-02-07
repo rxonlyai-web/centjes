@@ -1,10 +1,11 @@
 /* KPI Badge Styles */
+/* Mobile-first: base styles are mobile, desktop enhancements in @media (min-width: 769px) */
 
 .badge {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
-  padding: 1rem 1.25rem;
+  padding: 0.875rem 1rem;
   flex: 1;
   min-width: 0;
 }
@@ -19,7 +20,7 @@
 }
 
 .amount {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -45,12 +46,13 @@
   color: rgba(255, 255, 255, 0.8); /* White */
 }
 
-@media (max-width: 768px) {
+/* Desktop enhancements */
+@media (min-width: 769px) {
   .badge {
-    padding: 0.875rem 1rem;
+    padding: 1rem 1.25rem;
   }
 
   .amount {
-    font-size: 1.25rem;
+    font-size: 1.5rem;
   }
 }

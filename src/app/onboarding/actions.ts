@@ -13,7 +13,7 @@ export async function completeOnboarding(data: {
   addressLine1?: string
   postalCode?: string
   city?: string
-}): Promise<void> {
+}): Promise<{ organizationId: string }> {
   const supabase = await createClient()
 
   const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -86,9 +86,11 @@ export async function completeOnboarding(data: {
   }
 
   revalidatePath('/dashboard')
+
+  return { organizationId: org.id }
 }
 
-export async function createInviteLink(organizationId: string): Promise<string> {
+export async function createInviteLink(organizationId?: string): Promise<string> {
   const supabase = await createClient()
 
   const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -96,10 +98,26 @@ export async function createInviteLink(organizationId: string): Promise<string> 
     throw new Error('Niet ingelogd')
   }
 
+  // If no orgId provided, look up the user's organization
+  let orgId = organizationId
+  if (!orgId) {
+    const { data: membership } = await supabase
+      .from('organization_members')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .eq('role', 'owner')
+      .maybeSingle()
+    orgId = membership?.organization_id
+  }
+
+  if (!orgId) {
+    throw new Error('Geen organisatie gevonden')
+  }
+
   const { data: invite, error } = await supabase
     .from('organization_invites')
     .insert({
-      organization_id: organizationId,
+      organization_id: orgId,
       invited_by: user.id,
     })
     .select()

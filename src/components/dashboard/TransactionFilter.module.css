@@ -1,3 +1,5 @@
+/* Mobile-first: base styles are mobile, desktop enhancements in @media (min-width: 769px) */
+
 .filterContainer {
   display: flex;
   gap: 0.5rem;
@@ -9,12 +11,13 @@
 
 .filterButton {
   flex: 1;
-  padding: 0.75rem 1.5rem;
+  padding: 0.625rem 1rem;
+  min-height: var(--touch-target-min, 44px);
   background: none;
   border: none;
   color: rgba(255, 255, 255, 0.6);
   font-weight: 500;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
@@ -31,9 +34,10 @@
   color: white;
 }
 
-@media (max-width: 768px) {
+/* Desktop enhancements */
+@media (min-width: 769px) {
   .filterButton {
-    padding: 0.625rem 1rem;
-    font-size: 0.875rem;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9375rem;
   }
 }

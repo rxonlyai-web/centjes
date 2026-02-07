@@ -78,7 +78,7 @@ export async function middleware(request: NextRequest) {
       .from('profiles')
       .select('onboarding_completed')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()  // Use maybeSingle() - returns null for new OAuth users without profile
 
     // If no profile or onboarding not completed, redirect to onboarding
     if (!profile || !profile.onboarding_completed) {

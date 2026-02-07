@@ -9,6 +9,15 @@ import styles from './page.module.css'
 
 type BusinessType = 'zzp' | 'vof'
 
+// Step definitions:
+// 0: Welcome
+// 1: Business type (ZZP/VOF)
+// 2: Company name (required)
+// 3: Business details (KVK, BTW, IBAN)
+// 4: Address (street, postal, city)
+// 5: Invite partner (VOF only)
+// 6: Done
+
 export default function OnboardingPage() {
   const router = useRouter()
   const [step, setStep] = useState(0)
@@ -29,7 +38,13 @@ export default function OnboardingPage() {
   // Swipe handling
   const touchStart = useRef<{ x: number; y: number } | null>(null)
 
-  const totalSteps = businessType === 'vof' ? 5 : 4
+  // VOF has 7 steps (0-6), ZZP has 6 steps (0-5, skips invite)
+  const totalSteps = businessType === 'vof' ? 7 : 6
+
+  // Which step number is the "done" step
+  const doneStep = businessType === 'vof' ? 6 : 5
+  // Which step number is the invite step (VOF only)
+  const inviteStep = 5
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
@@ -44,26 +59,36 @@ export default function OnboardingPage() {
       if (dx < 0 && canGoNext()) {
         handleNext()
       } else if (dx > 0 && step > 0) {
-        setStep(s => s - 1)
+        handleBack()
       }
     }
     touchStart.current = null
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, businessType, companyName])
 
   function canGoNext() {
     if (step === 0) return true
     if (step === 1) return businessType !== null
     if (step === 2) return companyName.trim().length > 0
+    if (step === 3) return true // Business details optional
+    if (step === 4) return true // Address optional
     return true
   }
 
+  function handleBack() {
+    if (step > 0) {
+      setStep(s => s - 1)
+    }
+  }
+
   async function handleNext() {
-    if (step === 2 && canGoNext()) {
-      // Save onboarding data
+    setError('')
+
+    // Step 4 (Address) is where we save everything
+    if (step === 4 && canGoNext()) {
       setSaving(true)
-      setError('')
       try {
-        await completeOnboarding({
+        const result = await completeOnboarding({
           businessType: businessType!,
           companyName: companyName.trim(),
           kvkNumber: kvkNumber.trim() || undefined,
@@ -74,13 +99,17 @@ export default function OnboardingPage() {
           city: city.trim() || undefined,
         })
 
+        // Store the org ID for invite generation
+        setOrgId(result.organizationId)
+
         if (businessType === 'vof') {
-          setStep(3) // Go to invite step
+          setStep(inviteStep) // Go to invite step
         } else {
-          setStep(3) // Go to done step (no invite step for ZZP)
+          setStep(doneStep) // Go to done step (ZZP skips invite)
         }
-      } catch (err: any) {
-        setError(err.message || 'Er is iets misgegaan')
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Er is iets misgegaan'
+        setError(message)
       } finally {
         setSaving(false)
       }
@@ -92,21 +121,17 @@ export default function OnboardingPage() {
 
   function handleBusinessTypeSelect(type: BusinessType) {
     setBusinessType(type)
-    setStep(2) // Auto-advance
+    setStep(2) // Auto-advance to company name
   }
 
   async function handleGenerateInvite() {
-    if (!orgId) {
-      // We need to fetch the org ID
-      // The org was just created in completeOnboarding
-      // We'll generate the link server-side
-    }
     try {
-      // createInviteLink will find the user's org
-      const url = await createInviteLink(orgId)
+      // createInviteLink will use orgId if provided, or look up user's org
+      const url = await createInviteLink(orgId || undefined)
       setInviteUrl(url)
-    } catch (err: any) {
-      setError(err.message || 'Kon link niet aanmaken')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Kon link niet aanmaken'
+      setError(message)
     }
   }
 
@@ -136,9 +161,6 @@ export default function OnboardingPage() {
   function handleFinish() {
     router.push('/dashboard')
   }
-
-  // Determine which step is the "done" step
-  const doneStep = businessType === 'vof' ? 4 : 3
 
   return (
     <div
@@ -191,11 +213,11 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* Step 2: Company Details + Address */}
+        {/* Step 2: Company Name */}
         {step === 2 && (
           <div className={styles.step}>
-            <h2 className={styles.stepTitle}>Bedrijfsgegevens</h2>
-            <p className={styles.stepHelper}>Deze gegevens verschijnen op je facturen</p>
+            <h2 className={styles.stepTitle}>Hoe heet je bedrijf?</h2>
+            <p className={styles.stepHelper}>Dit verschijnt op je facturen</p>
 
             {error && <div className={styles.error}>{error}</div>}
 
@@ -212,6 +234,29 @@ export default function OnboardingPage() {
                   autoFocus
                 />
               </div>
+            </div>
+
+            <div className={styles.bottomAction}>
+              <button
+                onClick={handleNext}
+                className={styles.primaryBtn}
+                disabled={!canGoNext()}
+              >
+                Volgende
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Business Details (KVK, BTW, IBAN) */}
+        {step === 3 && (
+          <div className={styles.step}>
+            <h2 className={styles.stepTitle}>Zakelijke gegevens</h2>
+            <p className={styles.stepHelper}>Optioneel — je kunt dit later aanvullen</p>
+
+            {error && <div className={styles.error}>{error}</div>}
+
+            <div className={styles.form}>
               <div className={styles.formGroup}>
                 <label className={styles.label}>KVK-nummer</label>
                 <input
@@ -246,6 +291,28 @@ export default function OnboardingPage() {
                   autoComplete="off"
                 />
               </div>
+            </div>
+
+            <div className={styles.bottomAction}>
+              <button
+                onClick={handleNext}
+                className={styles.primaryBtn}
+              >
+                Volgende
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 4: Address */}
+        {step === 4 && (
+          <div className={styles.step}>
+            <h2 className={styles.stepTitle}>Vestigingsadres</h2>
+            <p className={styles.stepHelper}>Optioneel — voor je facturen</p>
+
+            {error && <div className={styles.error}>{error}</div>}
+
+            <div className={styles.form}>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Adres</label>
                 <input
@@ -287,7 +354,7 @@ export default function OnboardingPage() {
               <button
                 onClick={handleNext}
                 className={styles.primaryBtn}
-                disabled={!canGoNext() || saving}
+                disabled={saving}
               >
                 {saving ? 'Opslaan...' : 'Volgende'}
               </button>
@@ -295,8 +362,8 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* Step 3: Invite Partner (VOF only) */}
-        {step === 3 && businessType === 'vof' && (
+        {/* Step 5: Invite Partner (VOF only) */}
+        {step === inviteStep && businessType === 'vof' && (
           <div className={styles.step}>
             <h2 className={styles.stepTitle}>Nodig je vennoot uit</h2>
 
@@ -323,7 +390,7 @@ export default function OnboardingPage() {
             )}
 
             <div className={styles.bottomAction}>
-              <button onClick={() => setStep(4)} className={styles.textBtn}>
+              <button onClick={() => setStep(doneStep)} className={styles.textBtn}>
                 Later doen
               </button>
             </div>

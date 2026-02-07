@@ -1,3 +1,6 @@
+/* Landing Page Styles */
+/* Mobile-first: base styles are mobile, desktop enhancements in @media (min-width: 769px) */
+
 .page {
   display: flex;
   flex-direction: column;
@@ -15,13 +18,13 @@
   justify-content: center;
   min-height: 100vh;
   text-align: center;
-  padding: 2rem;
+  padding: 1rem;
   width: 100%;
   max-width: 720px;
 }
 
 .title {
-  font-size: 48px;
+  font-size: 36px;
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.1;
@@ -49,6 +52,7 @@
   background-color: var(--accent);
   color: white;
   padding: 14px 32px;
+  min-height: var(--touch-target-min, 44px);
   border-radius: 24px;
   font-weight: 500;
   font-size: 16px;
@@ -82,12 +86,12 @@
 .features {
   width: 100%;
   max-width: 1080px;
-  padding: 4rem 2rem;
+  padding: 3rem 1rem;
 }
 
 .featuresGrid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr;
   gap: 1.5rem;
 }
 
@@ -116,7 +120,7 @@
 .steps {
   width: 100%;
   max-width: 1080px;
-  padding: 4rem 2rem;
+  padding: 3rem 1rem;
   text-align: center;
 }
 
@@ -129,8 +133,9 @@
 
 .stepsRow {
   display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 2rem;
-  justify-content: center;
 }
 
 .step {
@@ -176,49 +181,49 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 6rem 2rem;
+  padding: 4rem 1rem;
   width: 100%;
 }
 
 .footerTitle {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 700;
   color: var(--foreground);
   margin: 0;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .title {
-    font-size: 36px;
+/* Desktop enhancements */
+@media (min-width: 769px) {
+  .hero {
+    padding: 2rem;
   }
 
-  .hero {
-    padding: 1rem;
+  .title {
+    font-size: 48px;
   }
 
   .features {
-    padding: 3rem 1rem;
+    padding: 4rem 2rem;
   }
 
   .featuresGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, 1fr);
   }
 
   .steps {
-    padding: 3rem 1rem;
+    padding: 4rem 2rem;
   }
 
   .stepsRow {
-    flex-direction: column;
-    align-items: center;
+    flex-direction: row;
+    justify-content: center;
   }
 
   .footerCta {
-    padding: 4rem 1rem;
+    padding: 6rem 2rem;
   }
 
   .footerTitle {
-    font-size: 28px;
+    font-size: 32px;
   }
 }
