@@ -11,7 +11,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { ArrowLeft, Download, Edit2, Save, X, Plus, Trash2, Mail } from 'lucide-react'
-import { getInvoiceById, updateInvoiceStatus, updateInvoice, generateInvoicePDF, type InvoiceWithItems } from '../actions'
+import { getInvoiceById, updateInvoiceStatus, updateInvoice, generateInvoicePDF, deleteInvoice, type InvoiceWithItems } from '../actions'
 import SendInvoiceModal from '@/components/SendInvoiceModal'
 import styles from './page.module.css'
 
@@ -35,6 +35,7 @@ export default function InvoiceDetailPage() {
   const [updatingStatus, setUpdatingStatus] = useState(false)
   const [downloadingPDF, setDownloadingPDF] = useState(false)
   const [showSendModal, setShowSendModal] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   // Edit mode state
   const [isEditing, setIsEditing] = useState(false)
@@ -178,6 +179,21 @@ export default function InvoiceDetailPage() {
     return { subtotal, vat, total }
   }
 
+  async function handleDelete() {
+    if (!invoice) return
+    if (!confirm(`Weet je zeker dat je factuur ${invoice.invoice_number} wilt verwijderen?`)) return
+
+    try {
+      setDeleting(true)
+      await deleteInvoice(invoice.id)
+      router.push('/dashboard/facturen')
+    } catch (err) {
+      console.error('Error deleting invoice:', err)
+      alert('Kon factuur niet verwijderen')
+      setDeleting(false)
+    }
+  }
+
   async function handleDownloadPDF() {
     if (!invoice) return
 
@@ -299,6 +315,16 @@ export default function InvoiceDetailPage() {
             >
               <Mail size={20} />
               <span className={styles.actionLabel}>Verstuur</span>
+            </button>
+
+            <button
+              className={`${styles.actionBtn} ${styles.deleteBtn}`}
+              onClick={handleDelete}
+              disabled={deleting}
+              aria-label="Verwijderen"
+            >
+              <Trash2 size={20} />
+              <span className={styles.actionLabel}>{deleting ? 'Laden...' : 'Verwijder'}</span>
             </button>
           </div>
         )}

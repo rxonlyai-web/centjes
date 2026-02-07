@@ -86,6 +86,17 @@
   cursor: not-allowed;
 }
 
+.deleteBtn {
+  color: #ff3b30;
+  border-color: rgba(255, 59, 48, 0.3);
+}
+
+.deleteBtn:hover:not(:disabled) {
+  background: rgba(255, 59, 48, 0.1);
+  border-color: #ff3b30;
+  color: #ff3b30;
+}
+
 .actionLabel {
   display: block;
 }
